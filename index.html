@@ -530,6 +530,8 @@ a{color:inherit}
 .ev-title-input::placeholder{color:var(--line-strong);font-weight:500}
 .ev-del-btn{background:transparent;border:0;font-size:15px;color:var(--muted);width:34px;height:34px;border-radius:7px;cursor:pointer;flex:0 0 auto}
 .ev-del-btn:hover{background:#fde8e8;color:var(--danger)}
+.ev-tool-btn{background:transparent;border:0;font-size:15px;color:var(--muted);width:34px;height:34px;border-radius:7px;cursor:pointer;flex:0 0 auto}
+.ev-tool-btn:hover{background:var(--surface-2);color:var(--ink)}
 .ev-date-row{padding:0 20px 12px;border-bottom:1px solid var(--line)}
 .ev-date-row span{font-size:12px;color:var(--muted)}
 .ev-body{padding:16px 20px 22px}
@@ -706,6 +708,7 @@ a{color:inherit}
         <span class="ev-type-badge" id="ev-type-badge"></span>
         <input id="ev-title" class="ev-title-input" placeholder="Titre de l'événement…" autocomplete="off">
       </div>
+      <button class="ev-tool-btn" id="ev-print" title="Imprimer">🖨</button>
       <button class="ev-del-btn" id="ev-delete" title="Supprimer l'événement">🗑</button>
       <button class="close" id="ev-close" aria-label="Fermer">×</button>
     </div>
@@ -747,6 +750,11 @@ function pinSymbol(a){
   if(a.etat==='Terminé')    return '💵';
   if(a.repondu)             return '🕑';
   return null;
+}
+/* couleur du pin : bleu ciel pour un appel d'offre répondu, sinon couleur de l'état */
+function pinColor(etat, repondu){
+  if(etat==="Appel d'offre" && repondu) return '#38BDF8'; // bleu ciel
+  return ETAT_COLOR[etat];
 }
 
 /* ---------- Couche de stockage (à remplacer par Firebase en phase 2) ---------- */
@@ -1023,6 +1031,46 @@ function deleteEventFromModal(){
   document.getElementById('ev-backdrop').classList.add('hidden'); evEditing=null;
 }
 
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function printEvent(){
+  if(!evEditing) return;
+  const {a,ev}=evEditing;
+  const title = eventTitle(ev), date = fmtTs(ev.ts), affaire = a.nom||'';
+  let inner;
+  if(ev.type==='doc'){
+    inner = `<div class="doc">${escapeHtml(ev.text||'')}</div>`;
+  }else{
+    const items=(ev.notes||[]).map(n=>
+      `<li class="${n.done?'done':''}"><span class="box">${n.done?'☑':'☐'}</span> ${escapeHtml(n.text)}</li>`).join('');
+    inner = `<ul class="todo">${items||'<li>(aucune tâche)</li>'}</ul>`;
+  }
+  const doc = `<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><title>${escapeHtml(title)}</title>
+    <style>
+      *{box-sizing:border-box}
+      body{font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#111;margin:26px;line-height:1.55}
+      h1{font-size:21px;margin:0 0 4px}
+      .meta{color:#555;font-size:12px;margin-bottom:18px;border-bottom:1px solid #ddd;padding-bottom:10px}
+      .doc{white-space:pre-wrap;font-size:13.5px}
+      ul.todo{list-style:none;padding:0;margin:0}
+      ul.todo li{padding:5px 0;font-size:14px}
+      ul.todo li.done{color:#777;text-decoration:line-through}
+      .box{display:inline-block;width:1.3em}
+      @media print{@page{margin:16mm}}
+    </style></head><body>
+      <h1>${escapeHtml(title)}</h1>
+      <div class="meta">${escapeHtml(affaire)} — ${escapeHtml(date)}</div>
+      ${inner}
+    </body></html>`;
+  const ifr=document.createElement('iframe');
+  ifr.setAttribute('aria-hidden','true');
+  ifr.style.cssText='position:fixed;right:0;bottom:0;width:0;height:0;border:0';
+  document.body.appendChild(ifr);
+  const d=ifr.contentWindow.document; d.open(); d.write(doc); d.close();
+  setTimeout(()=>{ try{ ifr.contentWindow.focus(); ifr.contentWindow.print(); }catch(e){} setTimeout(()=>ifr.remove(),800); }, 250);
+}
+
 function renderNote(a, ev, nt){
   const cb = el('input',{type:'checkbox'});
   cb.checked = !!nt.done;
@@ -1095,7 +1143,7 @@ function toggleMiniMap(e, a){
   if(!window.L){ box.textContent='Carte indisponible (Leaflet non chargé).'; return; }
   const m = L.map(box,{attributionControl:false,zoomControl:true}).setView([a.adresse.lat,a.adresse.lng],15);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(m);
-  L.marker([a.adresse.lat,a.adresse.lng],{icon:pinIcon(ETAT_COLOR[a.etat], pinSymbol(a))}).addTo(m);
+  L.marker([a.adresse.lat,a.adresse.lng],{icon:pinIcon(pinColor(a.etat,a.repondu), pinSymbol(a))}).addTo(m);
   box._map = m;
   setTimeout(()=>m.invalidateSize(),0);
 }
@@ -1141,12 +1189,12 @@ function updateCoordsLabel(){
 }
 
 function modalIcon(){
-  const etat=$('f-etat').value;
+  const etat=$('f-etat').value, rep=$('f-repondu').checked;
   let sym=null;
   if(etat==='En travaux') sym='🏗️';
   else if(etat==='Terminé') sym='💵';
-  else if($('f-repondu').checked) sym='🕑';
-  return pinIcon(ETAT_COLOR[etat], sym);
+  else if(rep) sym='🕑';
+  return pinIcon(pinColor(etat,rep), sym);
 }
 
 function setMarker(lat,lng,recenter=false){
@@ -1271,6 +1319,7 @@ document.addEventListener('keydown',e=>{ if(e.key==='Escape' && !backdrop.classL
 /* modale d'événement */
 $('ev-close').onclick = closeEventModal;
 $('ev-delete').onclick = deleteEventFromModal;
+$('ev-print').onclick = printEvent;
 const evBackdrop = $('ev-backdrop');
 evBackdrop.addEventListener('click',e=>{ if(e.target===evBackdrop) closeEventModal(); });
 document.addEventListener('keydown',e=>{ if(e.key==='Escape' && !evBackdrop.classList.contains('hidden')) closeEventModal(); });
@@ -1338,7 +1387,7 @@ function renderOverview(){
 
   const pts=[];
   for(const a of list){
-    const mk = L.marker([a.adresse.lat,a.adresse.lng],{icon:pinIcon(ETAT_COLOR[a.etat], pinSymbol(a))})
+    const mk = L.marker([a.adresse.lat,a.adresse.lng],{icon:pinIcon(pinColor(a.etat,a.repondu), pinSymbol(a))})
       .addTo(overviewLayer)
       .bindPopup(overviewPopup(a));
     mk._affaire = a;              // pour récupérer la météo au clic
