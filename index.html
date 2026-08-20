@@ -201,7 +201,7 @@ a{color:inherit}
 .track{
   flex:1 1 auto;min-width:0;
   overflow-x:auto;overflow-y:hidden;
-  padding:16px 16px 18px;
+  padding:22px 16px 18px;
   display:flex;align-items:stretch;gap:14px;
   position:relative;
   scrollbar-width:thin;scrollbar-color:var(--line-strong) transparent;
@@ -210,7 +210,7 @@ a{color:inherit}
 .track::-webkit-scrollbar-thumb{background:var(--line-strong);border-radius:9px}
 /* SIGNATURE : ligne de balisage haute visibilité derrière les événements */
 .track::before{
-  content:"";position:absolute;left:16px;right:16px;top:34px;height:6px;border-radius:3px;
+  content:"";position:absolute;left:16px;right:16px;top:17px;height:6px;border-radius:3px;
   background:repeating-linear-gradient(90deg,var(--hivis) 0 15px,var(--hivis-dark) 15px 30px);
   opacity:.85;pointer-events:none;
 }
@@ -278,15 +278,23 @@ a{color:inherit}
 .note-add button:hover{background:var(--brand);color:#fff;border-color:var(--brand)}
 
 .add-event{
-  flex:0 0 auto;align-self:flex-start;margin-top:2px;
-  border:2px dashed var(--line-strong);background:transparent;border-radius:var(--r-sm);
-  padding:11px 15px;color:var(--muted);font-weight:600;font-size:13px;
-  display:flex;align-items:center;gap:8px;min-height:56px;
+  flex:0 0 auto;align-self:flex-start;
+  position:relative;z-index:1;                 /* passe AU-DESSUS de la ligne de balisage */
+  background:var(--surface);                    /* masque la ligne derrière le bouton */
+  border:2px dashed var(--line-strong);border-radius:var(--r-sm);
+  padding:13px 16px;min-height:56px;
+  display:flex;align-items:center;gap:10px;
+  color:var(--muted);font-weight:600;font-size:13px;
+  transition:border-color .15s ease,color .15s ease,background .15s ease;
+}
+.add-event::before{                             /* pastille-nœud posée sur la ligne, comme un événement */
+  content:"";position:absolute;top:-9px;left:19px;width:14px;height:14px;border-radius:50%;
+  background:var(--surface);border:3px solid var(--hivis-dark);box-shadow:0 0 0 2px var(--hivis);
 }
 .add-event:hover{border-color:var(--brand);color:var(--brand);background:var(--surface-2)}
 .add-event .plus{
-  width:20px;height:20px;border-radius:50%;background:var(--hivis);color:var(--hivis-dark);
-  display:grid;place-items:center;font-size:15px;font-weight:700;
+  width:24px;height:24px;border-radius:50%;background:var(--hivis);color:var(--hivis-dark);
+  display:grid;place-items:center;font-size:16px;font-weight:700;line-height:1;flex:0 0 auto;
 }
 
 /* ============================================================
