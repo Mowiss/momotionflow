@@ -749,7 +749,9 @@ function pinSymbol(a){
   if(a.etat==='En travaux') return '🏗️';
   if(a.etat==='Terminé')    return '💵';
   if(a.etat==='Sans suite') return '♻️';
+  if(a.etat==='En étude')   return '⚙️';
   if(a.repondu)             return '🕑';
+  if(a.etat==="Appel d'offre") return '📥';
   return null;
 }
 /* couleur du pin : bleu ciel pour un appel d'offre répondu, sinon couleur de l'état */
@@ -1195,7 +1197,9 @@ function modalIcon(){
   if(etat==='En travaux') sym='🏗️';
   else if(etat==='Terminé') sym='💵';
   else if(etat==='Sans suite') sym='♻️';
+  else if(etat==='En étude') sym='⚙️';
   else if(rep) sym='🕑';
+  else if(etat==="Appel d'offre") sym='📥';
   return pinIcon(pinColor(etat,rep), sym);
 }
 
