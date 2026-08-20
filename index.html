@@ -36,6 +36,7 @@
   --etat-ao:#2563EB;      /* Appel d'offre */
   --etat-et:#D97706;      /* En étude */
   --etat-tx:#16A34A;      /* En travaux */
+  --etat-tm:#EC4899;      /* Terminé (rose) */
   --etat-ss:#64748B;      /* Sans suite */
 
   --danger:#DC2626;
@@ -139,6 +140,7 @@ a{color:inherit}
 .chip[data-etat="Appel d'offre"]{--c:var(--etat-ao)}
 .chip[data-etat="En étude"]{--c:var(--etat-et)}
 .chip[data-etat="En travaux"]{--c:var(--etat-tx)}
+.chip[data-etat="Terminé"]{--c:var(--etat-tm)}
 .chip[data-etat="Sans suite"]{--c:var(--etat-ss)}
 .chip .dot{color:var(--c,var(--muted))}
 .chip.on{color:#fff;background:var(--c,var(--brand));border-color:transparent}
@@ -171,6 +173,7 @@ a{color:inherit}
 .lane[data-etat="Appel d'offre"] .lane-head{--etat-c:var(--etat-ao)}
 .lane[data-etat="En étude"] .lane-head{--etat-c:var(--etat-et)}
 .lane[data-etat="En travaux"] .lane-head{--etat-c:var(--etat-tx)}
+.lane[data-etat="Terminé"] .lane-head{--etat-c:var(--etat-tm)}
 .lane[data-etat="Sans suite"] .lane-head{--etat-c:var(--etat-ss)}
 
 .etat-badge{
@@ -228,9 +231,30 @@ a{color:inherit}
   background:var(--surface);border:3px solid var(--hivis-dark);box-shadow:0 0 0 2px var(--hivis);
 }
 .event-top{
-  display:flex;align-items:center;justify-content:space-between;gap:8px;
-  padding:10px 11px;border-bottom:1px dashed var(--line);
+  display:flex;align-items:center;gap:8px;
+  padding:9px 10px;border-bottom:1px dashed var(--line);
+  cursor:pointer;user-select:none;
 }
+.event.collapsed{flex:0 0 auto;width:auto;min-width:172px;max-width:250px}
+.event.collapsed .event-top{border-bottom:0}
+.event.collapsed .event-body{display:none}
+.event-body{display:flex;flex-direction:column;flex:1;min-height:0}
+.ev-toggle{background:transparent;border:0;color:var(--muted);font-size:11px;width:14px;flex:0 0 auto;cursor:pointer;line-height:1}
+.ev-type-ic{width:22px;height:22px;border-radius:6px;display:grid;place-items:center;font-size:12px;flex:0 0 auto;cursor:pointer}
+.ev-type-ic.todo{background:#e9f2ff;color:#2563eb}
+.ev-type-ic.doc{background:#fef3e2;color:#b45309}
+.ev-summary{flex:1;min-width:0;font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.event:not(.collapsed) .ev-summary{display:none}
+.doc-text{width:100%;border:0;resize:vertical;min-height:130px;font-family:inherit;font-size:13px;line-height:1.5;color:var(--ink);padding:10px 11px;background:var(--surface);outline:none;border-radius:0 0 var(--r-sm) var(--r-sm)}
+.doc-text::placeholder{color:var(--muted)}
+.evt-menu{position:fixed;z-index:6000;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);box-shadow:var(--sh-2);padding:6px;display:flex;flex-direction:column;gap:4px;min-width:238px}
+.evt-menu-item{display:flex;align-items:center;gap:11px;background:transparent;border:0;border-radius:var(--r-xs);padding:9px 10px;cursor:pointer;text-align:left;width:100%}
+.evt-menu-item:hover{background:var(--surface-2)}
+.emi-ic{width:32px;height:32px;border-radius:8px;display:grid;place-items:center;font-size:15px;flex:0 0 auto}
+.emi-ic.todo{background:#e9f2ff;color:#2563eb}
+.emi-ic.doc{background:#fef3e2;color:#b45309}
+.evt-menu-item b{display:block;font-size:13.5px;font-weight:600;color:var(--ink)}
+.emi-sub{font-size:11.5px;color:var(--muted)}
 .ts{
   font-family:"IBM Plex Mono";font-size:11.5px;color:var(--brand);font-weight:500;
   cursor:pointer;border-radius:4px;padding:2px 4px;margin:-2px -4px;
@@ -390,6 +414,8 @@ a{color:inherit}
 
 /* marqueur SVG (remplace l'icône PNG Leaflet qui buguait en file:// / CDN) */
 .pin-div{background:transparent;border:0}
+.pin-wrap{position:relative;width:28px;height:38px}
+.pin-sym{position:absolute;top:6px;left:0;width:28px;text-align:center;font-size:12px;line-height:1;pointer-events:none}
 .map-pop{font-family:"Inter",sans-serif;min-width:186px}
 .map-pop .pe{font-family:"IBM Plex Mono";font-size:9.5px;letter-spacing:.5px;text-transform:uppercase;color:#fff;padding:2px 8px;border-radius:999px;display:inline-block;margin-bottom:7px}
 .map-pop h3{font-family:"Space Grotesk";font-size:14.5px;margin:0 0 5px}
@@ -447,6 +473,35 @@ a{color:inherit}
 .mp-weather .wx-desc{color:var(--muted);line-height:1.3}
 .mp-weather.muted{color:var(--muted);font-style:italic}
 
+/* ============================================================
+   VUE AGENDA — jalons datés triés autour de la ligne « échéance »
+   ============================================================ */
+.agenda{max-width:920px;margin:0 auto;padding:18px 18px 60px}
+.agenda.hidden{display:none}
+.agenda-empty{text-align:center;color:var(--muted);padding:60px 22px;border:1px dashed var(--line-strong);border-radius:var(--r);background:var(--surface);font-size:14px}
+.agenda-head{font-family:"IBM Plex Mono";font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin:6px 2px 10px}
+.agenda-list{display:flex;flex-direction:column;gap:10px}
+
+.ag-row{display:flex;align-items:center;gap:13px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);padding:11px 14px;box-shadow:var(--sh-1)}
+.ag-row.overdue{border-color:#f0c4c4;background:#fffafa}
+.ag-date{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;min-width:66px;padding:6px 8px;border-radius:var(--r-xs);border:1px solid transparent}
+.ag-date .ag-day{font-family:"Space Grotesk";font-weight:600;font-size:13px;line-height:1.1}
+.ag-date .ag-rel{font-family:"IBM Plex Mono";font-size:10.5px;font-weight:600;margin-top:2px}
+.ag-dot{width:11px;height:11px;border-radius:50%;flex:0 0 auto}
+.ag-body{flex:1;min-width:0}
+.ag-nom{font-family:"Space Grotesk";font-weight:600;font-size:15px;line-height:1.2;word-break:break-word}
+.ag-meta{font-size:12px;color:var(--muted);margin-top:2px}
+.ag-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.ag-btn{border:1px solid var(--brand);background:var(--brand);color:#fff;border-radius:var(--r-xs);padding:6px 10px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap}
+.ag-btn:hover{background:var(--brand-700)}
+.ag-btn.ghost{background:var(--surface);color:var(--brand);border-color:var(--line-strong)}
+.ag-btn.ghost:hover{background:var(--surface-2)}
+
+/* la ligne « échéance » (aujourd'hui) : ruban de balisage hi-vis */
+.ech-line{position:relative;display:flex;align-items:center;justify-content:center;margin:10px 0;height:34px}
+.ech-line::before{content:"";position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);height:6px;border-radius:3px;background:repeating-linear-gradient(90deg,var(--hivis) 0 15px,var(--hivis-dark) 15px 30px)}
+.ech-line-label{position:relative;z-index:1;background:var(--brand);color:#fff;font-family:"IBM Plex Mono";font-size:11px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;padding:6px 15px;border-radius:999px;box-shadow:var(--sh-1)}
+
 @media (max-width:720px){
   .modal-body{grid-template-columns:1fr}
   .lane{flex-direction:column}
@@ -489,6 +544,7 @@ a{color:inherit}
     <div class="viewtoggle" id="viewtoggle">
       <button class="vt on" data-view="board">Suivi</button>
       <button class="vt" data-view="map">Carte</button>
+      <button class="vt" data-view="agenda">Agenda</button>
     </div>
 
     <div class="spacer"></div>
@@ -509,12 +565,12 @@ a{color:inherit}
 
 <!-- ============ FILTRES ============ -->
 <div class="filters" id="filters">
-  <span class="lbl">État</span>
-  <button class="chip all on" data-etat="__all">Toutes</button>
-  <button class="chip" data-etat="Appel d'offre"><span class="dot"></span>Appel d'offre</button>
-  <button class="chip" data-etat="En étude"><span class="dot"></span>En étude</button>
-  <button class="chip" data-etat="En travaux"><span class="dot"></span>En travaux</button>
-  <button class="chip" data-etat="Sans suite"><span class="dot"></span>Sans suite</button>
+  <span class="lbl">États</span>
+  <button class="chip on" data-etat="Appel d'offre"><span class="dot"></span>Appel d'offre</button>
+  <button class="chip on" data-etat="En étude"><span class="dot"></span>En étude</button>
+  <button class="chip on" data-etat="En travaux"><span class="dot"></span>En travaux</button>
+  <button class="chip on" data-etat="Terminé"><span class="dot"></span>Terminé</button>
+  <button class="chip on" data-etat="Sans suite"><span class="dot"></span>Sans suite</button>
   <span class="count" id="count"></span>
 </div>
 
@@ -526,6 +582,9 @@ a{color:inherit}
   <div id="overview-map"></div>
   <div class="map-note hidden" id="map-note"></div>
 </section>
+
+<!-- ============ VUE AGENDA ============ -->
+<section class="agenda hidden" id="agenda"></section>
 
 <!-- ============ MODALE AFFAIRE ============ -->
 <div class="backdrop hidden" id="backdrop">
@@ -541,6 +600,7 @@ a{color:inherit}
           <option>Appel d'offre</option>
           <option>En étude</option>
           <option>En travaux</option>
+          <option>Terminé</option>
           <option>Sans suite</option>
         </select>
       </div>
@@ -611,16 +671,20 @@ a{color:inherit}
      Le reste du code (rendu, événements, notes) n'a pas à changer.
    ============================================================================ */
 
-const ETATS = ["Appel d'offre","En étude","En travaux","Sans suite"];
-const ETAT_COLOR = {"Appel d'offre":"#2563EB","En étude":"#D97706","En travaux":"#16A34A","Sans suite":"#64748B"};
+const ETATS = ["Appel d'offre","En étude","En travaux","Terminé","Sans suite"];
+const ETAT_COLOR = {"Appel d'offre":"#2563EB","En étude":"#D97706","En travaux":"#16A34A","Terminé":"#EC4899","Sans suite":"#64748B"};
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,7);
 
-/* Marqueur cartographique en SVG intégré — évite le bug des PNG Leaflet par défaut */
-function pinIcon(color){
+/* Marqueur cartographique en SVG intégré — évite le bug des PNG Leaflet par défaut.
+   symbol : optionnel, emoji affiché au centre à la place du point blanc (ex. 🕑 pour "répondu"). */
+function pinIcon(color, symbol){
   const c = color || '#0E2A47';
+  const bg = symbol ? `<circle cx="14" cy="13" r="8" fill="#ffffff"/>` : `<circle cx="14" cy="13" r="4.6" fill="#ffffff"/>`;
+  const svgStr = `<svg width="28" height="38" viewBox="0 0 28 38" xmlns="http://www.w3.org/2000/svg"><path d="M14 37S26 22 26 13A12 12 0 0 0 2 13C2 22 14 37 14 37Z" fill="${c}" stroke="#ffffff" stroke-width="2"/>${bg}</svg>`;
+  const sym = symbol ? `<span class="pin-sym">${symbol}</span>` : '';
   return L.divIcon({
     className:'pin-div', iconSize:[28,38], iconAnchor:[14,37], popupAnchor:[0,-34],
-    html:`<svg width="28" height="38" viewBox="0 0 28 38" xmlns="http://www.w3.org/2000/svg"><path d="M14 37S26 22 26 13A12 12 0 0 0 2 13C2 22 14 37 14 37Z" fill="${c}" stroke="#ffffff" stroke-width="2"/><circle cx="14" cy="13" r="4.6" fill="#ffffff"/></svg>`
+    html:`<div class="pin-wrap">${svgStr}${sym}</div>`
   });
 }
 
@@ -656,7 +720,7 @@ const Store = {
 
 /* ---------- État applicatif ---------- */
 let affaires = Store.load();
-let filterEtat = '__all';
+let activeEtats = new Set(ETATS);
 let searchTerm = '';
 const persist = () => Store.saveAll(affaires);
 
@@ -743,7 +807,7 @@ const toLocalInput = iso => { // -> valeur pour <input type=datetime-local>
 const board = document.getElementById('board');
 
 function matchesFilters(a){
-  if(filterEtat!=='__all' && a.etat!==filterEtat) return false;
+  if(!activeEtats.has(a.etat)) return false;
   if(searchTerm){
     const hay = [a.nom, a.adresse?.text, a.client?.entreprise, a.client?.contact].join(' ').toLowerCase();
     if(!hay.includes(searchTerm)) return false;
@@ -808,7 +872,7 @@ function renderLane(a){
 
   const track = el('div',{class:'track', dataset:{id:a.id}});
   (a.events||[]).forEach(ev => track.append(renderEvent(a, ev)));
-  track.append(el('button',{class:'add-event',onclick:()=>addEvent(a,track)},
+  track.append(el('button',{class:'add-event',onclick:e=>openEventMenu(e.currentTarget,a,track)},
     el('span',{class:'plus'},'+'),'événement'));
   if(!a.events || a.events.length===0) track.classList.add('empty');
 
@@ -817,36 +881,74 @@ function renderLane(a){
   return lane;
 }
 
-function renderEvent(a, ev){
-  const notes = el('ul',{class:'notes'});
-  (ev.notes||[]).forEach(nt => notes.append(renderNote(a,ev,nt)));
+function eventSummary(ev){
+  if(ev.type==='doc'){
+    const t=(ev.text||'').trim();
+    if(!t) return 'Document vide';
+    const first=t.split('\n')[0];
+    return first.length>40 ? first.slice(0,40)+'…' : first;
+  }
+  const n=(ev.notes||[]).length, done=(ev.notes||[]).filter(x=>x.done).length;
+  return n===0 ? 'Aucune tâche' : `${done}/${n} fait${done>1?'s':''}`;
+}
 
-  const input = el('input',{type:'text',placeholder:'Ajouter une note…',
-    onkeydown:e=>{ if(e.key==='Enter'){ e.preventDefault(); commitNote(); } }});
-  const commitNote = ()=>{
-    const txt = input.value.trim(); if(!txt) return;
-    const nt = {id:uid(), text:txt, done:false};
-    ev.notes = ev.notes||[]; ev.notes.push(nt); persist();
-    notes.append(renderNote(a,ev,nt));
-    input.value=''; input.focus();
-  };
+function renderEvent(a, ev){
+  const isDoc = ev.type==='doc';
+  const collapsed = ev.collapsed ?? true;
 
   const time = el('time',{class:'ts mono',datetime:ev.ts,title:'Cliquer pour modifier la date'}, fmtTs(ev.ts));
-  time.addEventListener('click',()=>editTs(ev,time));
+  time.addEventListener('click',e=>{ e.stopPropagation(); editTs(ev,time); });
 
-  return el('article',{class:'event',dataset:{id:ev.id}},
-    el('div',{class:'event-top'}, time,
-      el('button',{class:'ev-del',title:'Supprimer l\'événement',
-        onclick:e=>{ if(confirm('Supprimer cet événement ?')){ ev._del=true;
-          a.events=a.events.filter(x=>x.id!==ev.id); persist();
-          const lane=e.target.closest('.lane'); const track=lane.querySelector('.track');
-          e.target.closest('.event').remove();
-          if(a.events.length===0) track.classList.add('empty');
-        }}}, '×'),
-    ),
-    notes,
-    el('div',{class:'note-add'}, input, el('button',{title:'Ajouter la note',onclick:commitNote},'+'))
-  );
+  const toggle  = el('button',{class:'ev-toggle',title:'Plier / déplier'}, collapsed?'▸':'▾');
+  const typeIc  = el('span',{class:'ev-type-ic '+(isDoc?'doc':'todo'),title:isDoc?'Document':'To-Do'}, isDoc?'📄':'✓');
+  const summary = el('span',{class:'ev-summary'}, eventSummary(ev));
+  const delBtn  = el('button',{class:'ev-del',title:'Supprimer'},'×');
+
+  const top = el('div',{class:'event-top'}, toggle, typeIc, time, summary, delBtn);
+
+  let body;
+  if(isDoc){
+    const ta = el('textarea',{class:'doc-text',placeholder:'Collez ou saisissez vos informations…',rows:6});
+    ta.value = ev.text||'';
+    let t;
+    ta.addEventListener('input',()=>{ ev.text=ta.value; summary.textContent=eventSummary(ev); clearTimeout(t); t=setTimeout(persist,400); });
+    ta.addEventListener('click',e=>e.stopPropagation());
+    body = el('div',{class:'event-body'}, ta);
+  }else{
+    const notes = el('ul',{class:'notes'});
+    (ev.notes||[]).forEach(nt=>notes.append(renderNote(a,ev,nt)));
+    const input = el('input',{type:'text',placeholder:'Ajouter une note…',
+      onkeydown:e=>{ if(e.key==='Enter'){ e.preventDefault(); commitNote(); } }, onclick:e=>e.stopPropagation()});
+    const commitNote = ()=>{
+      const txt=input.value.trim(); if(!txt) return;
+      const nt={id:uid(),text:txt,done:false}; ev.notes=ev.notes||[]; ev.notes.push(nt); persist();
+      notes.append(renderNote(a,ev,nt)); input.value=''; input.focus(); summary.textContent=eventSummary(ev);
+    };
+    body = el('div',{class:'event-body'}, notes,
+      el('div',{class:'note-add'}, input, el('button',{title:'Ajouter la note',onclick:commitNote},'+')));
+  }
+
+  const art = el('article',{class:'event'+(collapsed?' collapsed':''), dataset:{id:ev.id}}, top, body);
+
+  function toggleCollapse(){
+    const now = !art.classList.contains('collapsed');
+    art.classList.toggle('collapsed', now);
+    ev.collapsed = now; persist();
+    toggle.textContent = now?'▸':'▾';
+    summary.textContent = eventSummary(ev);
+  }
+  toggle.addEventListener('click',e=>{ e.stopPropagation(); toggleCollapse(); });
+  typeIc.addEventListener('click',e=>{ e.stopPropagation(); toggleCollapse(); });
+  top.addEventListener('click',()=>toggleCollapse());
+  delBtn.addEventListener('click',e=>{
+    e.stopPropagation();
+    if(confirm('Supprimer cet événement ?')){
+      a.events=a.events.filter(x=>x.id!==ev.id); persist();
+      const track=art.closest('.track'); art.remove();
+      if(track && (!a.events || a.events.length===0)) track.classList.add('empty');
+    }
+  });
+  return art;
 }
 
 function renderNote(a, ev, nt){
@@ -878,14 +980,36 @@ function editTs(ev, timeEl){
 /* ============================================================================
    ACTIONS
    ============================================================================ */
-function addEvent(a, track){
-  const ev = {id:uid(), ts:new Date().toISOString(), notes:[]};
+function addEvent(a, track, type='todo'){
+  const ev = {id:uid(), ts:new Date().toISOString(), type, collapsed:false};
+  if(type==='doc') ev.text=''; else ev.notes=[];
   a.events = a.events||[]; a.events.push(ev); persist();
   track.classList.remove('empty');
   const node = renderEvent(a, ev);
   track.insertBefore(node, track.querySelector('.add-event'));
   track.scrollTo({left:track.scrollWidth, behavior:'smooth'});
-  setTimeout(()=>node.querySelector('.note-add input').focus(),200);
+  setTimeout(()=>{ const f=node.querySelector('textarea, .note-add input'); if(f) f.focus(); },200);
+}
+
+/* menu flottant : Nouvelle To-Do / Nouveau Document */
+function closeEventMenu(){ const m=document.querySelector('.evt-menu'); if(m) m.remove(); }
+function openEventMenu(anchorEl, a, track){
+  closeEventMenu();
+  const menu = el('div',{class:'evt-menu'},
+    el('button',{class:'evt-menu-item',onclick:()=>{ closeEventMenu(); addEvent(a,track,'todo'); }},
+      el('span',{class:'emi-ic todo'},'✓'),
+      el('div',{}, el('b',{},'Nouvelle To-Do'), el('span',{class:'emi-sub'},'liste de tâches à cocher'))),
+    el('button',{class:'evt-menu-item',onclick:()=>{ closeEventMenu(); addEvent(a,track,'doc'); }},
+      el('span',{class:'emi-ic doc'},'📄'),
+      el('div',{}, el('b',{},'Nouveau Document'), el('span',{class:'emi-sub'},'texte libre / copier-coller')))
+  );
+  document.body.append(menu);
+  const r=anchorEl.getBoundingClientRect(), mw=menu.offsetWidth, mh=menu.offsetHeight;
+  let left=r.left, top=r.bottom+6;
+  if(top+mh>innerHeight-8) top=r.top-mh-6;
+  if(left+mw>innerWidth-8) left=innerWidth-mw-8;
+  menu.style.left=Math.max(8,left)+'px'; menu.style.top=Math.max(8,top)+'px';
+  setTimeout(()=>document.addEventListener('click',closeEventMenu,{once:true}),0);
 }
 
 function deleteAffaire(a){
@@ -897,6 +1021,7 @@ function deleteAffaire(a){
     `${affaires.filter(matchesFilters).length} / ${affaires.length} affaire${affaires.length>1?'s':''}`;
   if(affaires.length===0) renderAll();
   if(currentView==='map') renderOverview();
+  if(currentView==='agenda') renderAgenda();
   toast('Affaire supprimée');
 }
 
@@ -911,7 +1036,7 @@ function toggleMiniMap(e, a){
   if(!window.L){ box.textContent='Carte indisponible (Leaflet non chargé).'; return; }
   const m = L.map(box,{attributionControl:false,zoomControl:true}).setView([a.adresse.lat,a.adresse.lng],15);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(m);
-  L.marker([a.adresse.lat,a.adresse.lng],{icon:pinIcon(ETAT_COLOR[a.etat])}).addTo(m);
+  L.marker([a.adresse.lat,a.adresse.lng],{icon:pinIcon(ETAT_COLOR[a.etat], a.repondu?'🕑':null)}).addTo(m);
   box._map = m;
   setTimeout(()=>m.invalidateSize(),0);
 }
@@ -956,10 +1081,14 @@ function updateCoordsLabel(){
     : 'Aucun point posé.';
 }
 
+function modalIcon(){
+  return pinIcon(ETAT_COLOR[$('f-etat').value], $('f-repondu').checked?'🕑':null);
+}
+
 function setMarker(lat,lng,recenter=false){
   modalCoords={lat,lng}; updateCoordsLabel();
   if(!modalMap) return;
-  const icon = pinIcon(ETAT_COLOR[$('f-etat').value]);
+  const icon = modalIcon();
   if(modalMarker) modalMarker.setLatLng([lat,lng]).setIcon(icon);
   else modalMarker=L.marker([lat,lng],{icon}).addTo(modalMap);
   if(recenter) modalMap.setView([lat,lng],16);
@@ -974,7 +1103,7 @@ function initModalMap(){
   const start = modalCoords.lat!=null ? [modalCoords.lat,modalCoords.lng] : [44.559, 6.079]; // Gap par défaut
   modalMap = L.map(box).setView(start, modalCoords.lat!=null?15:12);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(modalMap);
-  if(modalCoords.lat!=null){ modalMarker=L.marker(start,{icon:pinIcon(ETAT_COLOR[$('f-etat').value])}).addTo(modalMap); }
+  if(modalCoords.lat!=null){ modalMarker=L.marker(start,{icon:modalIcon()}).addTo(modalMap); }
   modalMap.on('click', e=>{
     setMarker(e.latlng.lat, e.latlng.lng);
     if(!$('f-adresse').value.trim()) reverseGeocode(e.latlng.lat,e.latlng.lng);
@@ -1031,6 +1160,7 @@ function saveModal(){
   }
   closeModal(); renderAll();
   if(currentView==='map') renderOverview();
+  if(currentView==='agenda') renderAgenda();
 }
 
 /* ============================================================================
@@ -1050,7 +1180,7 @@ function importJSON(file){
       const data = JSON.parse(reader.result);
       if(!Array.isArray(data)) throw new Error('format');
       if(!confirm(`Importer ${data.length} affaire(s) ? Cela remplacera les données actuelles.`)) return;
-      affaires = data; persist(); renderAll(); if(currentView==='map') renderOverview(); toast('Import réussi');
+      affaires = data; persist(); renderAll(); if(currentView==='map') renderOverview(); if(currentView==='agenda') renderAgenda(); toast('Import réussi');
     }catch(e){ toast('Fichier JSON invalide.'); }
   };
   reader.readAsText(file);
@@ -1081,12 +1211,13 @@ $('file-import').addEventListener('change',e=>{ if(e.target.files[0]) importJSON
 $('search').addEventListener('input',e=>{ searchTerm=e.target.value.trim().toLowerCase(); renderAll(); if(currentView==='map') renderOverview(); });
 
 document.getElementById('filters').addEventListener('click',e=>{
-  const chip = e.target.closest('.chip'); if(!chip) return;
-  document.querySelectorAll('.chip').forEach(c=>c.classList.remove('on'));
-  chip.classList.add('on');
-  filterEtat = chip.dataset.etat;
+  const chip=e.target.closest('.chip'); if(!chip) return;
+  const et=chip.dataset.etat;
+  if(activeEtats.has(et)) activeEtats.delete(et); else activeEtats.add(et);
+  chip.classList.toggle('on', activeEtats.has(et));
   renderAll();
   if(currentView==='map') renderOverview();
+  if(currentView==='agenda') renderAgenda();
 });
 
 /* ============================================================================
@@ -1100,7 +1231,9 @@ function setView(v){
   document.querySelectorAll('.viewtoggle .vt').forEach(b=>b.classList.toggle('on', b.dataset.view===v));
   document.getElementById('board').classList.toggle('hidden', v!=='board');
   document.getElementById('mapview').classList.toggle('hidden', v!=='map');
+  document.getElementById('agenda').classList.toggle('hidden', v!=='agenda');
   if(v==='map') renderOverview();
+  if(v==='agenda') renderAgenda();
 }
 
 function renderOverview(){
@@ -1123,7 +1256,7 @@ function renderOverview(){
 
   const list=affaires.filter(a=>matchesFilters(a) && a.adresse && a.adresse.lat!=null);
   if(list.length===0){
-    note.textContent=(filterEtat==='__all' && !searchTerm)
+    note.textContent=(activeEtats.size===ETATS.length && !searchTerm)
       ? 'Aucune affaire géolocalisée pour le moment.'
       : 'Aucune affaire géolocalisée avec ce filtre.';
     note.classList.remove('hidden');
@@ -1134,7 +1267,7 @@ function renderOverview(){
 
   const pts=[];
   for(const a of list){
-    const mk = L.marker([a.adresse.lat,a.adresse.lng],{icon:pinIcon(ETAT_COLOR[a.etat])})
+    const mk = L.marker([a.adresse.lat,a.adresse.lng],{icon:pinIcon(ETAT_COLOR[a.etat], a.repondu?'🕑':null)})
       .addTo(overviewLayer)
       .bindPopup(overviewPopup(a));
     mk._affaire = a;              // pour récupérer la météo au clic
@@ -1173,6 +1306,69 @@ function gotoLane(a){
       lane.classList.remove('flash'); void lane.offsetWidth; lane.classList.add('flash');
     }
   },90);
+}
+
+/* ---------- Agenda : jalons datés non répondus, triés autour de l'échéance ---------- */
+function renderAgenda(){
+  const wrap=document.getElementById('agenda'); wrap.innerHTML='';
+  const today=new Date(); today.setHours(0,0,0,0);
+  const dOf=a=>{ const d=new Date(a.echeance+'T00:00:00'); d.setHours(0,0,0,0); return d; };
+  const CLOSED=new Set(["Sans suite","Terminé"]);
+  const items=affaires.filter(a=>a.echeance && !a.repondu && !CLOSED.has(a.etat) && activeEtats.has(a.etat));
+
+  if(items.length===0){
+    wrap.append(el('div',{class:'agenda-empty'},
+      "Aucune échéance en attente. Ajoutez une date d'échéance à une affaire non répondue pour la voir apparaître ici."));
+    return;
+  }
+
+  const upcoming=items.filter(a=>dOf(a)>=today).sort((x,y)=>dOf(x)-dOf(y)); // plus urgent en haut
+  const overdue =items.filter(a=>dOf(a)<today).sort((x,y)=>dOf(y)-dOf(x));  // le plus récent dépassé près de la ligne
+
+  const list=el('div',{class:'agenda-list'});
+  if(upcoming.length) list.append(el('div',{class:'agenda-head'}, 'À traiter — par priorité'));
+  upcoming.forEach(a=>list.append(agendaRow(a,today)));
+
+  list.append(el('div',{class:'ech-line'},
+    el('span',{class:'ech-line-label'},
+      'Échéance · aujourd\'hui · '+today.toLocaleDateString('fr-FR',{day:'2-digit',month:'long',year:'numeric'}))
+  ));
+
+  if(overdue.length) list.append(el('div',{class:'agenda-head'}, 'Dépassées'));
+  overdue.forEach(a=>list.append(agendaRow(a,today)));
+
+  wrap.append(list);
+}
+
+function agendaRow(a,today){
+  const d=new Date(a.echeance+'T00:00:00'); d.setHours(0,0,0,0);
+  const days=Math.round((d-today)/86400000);
+  const over=days<0;
+  let rel, cls;
+  if(over){ cls='ech-late'; rel='J+'+(-days); }
+  else if(days===0){ cls='ech-late'; rel="auj."; }
+  else if(days<=3){ cls='ech-soon'; rel='J-'+days; }
+  else if(days<=7){ cls='ech-warn'; rel='J-'+days; }
+  else { cls='ech-ok'; rel='J-'+days; }
+  const c=a.client||{};
+  return el('div',{class:'ag-row'+(over?' overdue':'')},
+    el('div',{class:'ag-date '+cls},
+      el('span',{class:'ag-day'}, d.toLocaleDateString('fr-FR',{day:'2-digit',month:'short'})),
+      el('span',{class:'ag-rel'}, rel)
+    ),
+    el('span',{class:'ag-dot',style:`background:${ETAT_COLOR[a.etat]}`}),
+    el('div',{class:'ag-body'},
+      el('div',{class:'ag-nom'}, a.nom),
+      el('div',{class:'ag-meta'}, [a.etat, c.entreprise].filter(Boolean).join(' · '))
+    ),
+    el('div',{class:'ag-actions'},
+      el('button',{class:'ag-btn',title:'Marquer comme répondu',onclick:()=>{
+        a.repondu=true; persist(); renderAgenda(); if(currentView==='map') renderOverview();
+      }},'✓ Répondu'),
+      el('button',{class:'ag-btn ghost',onclick:()=>gotoLane(a)},'Suivi'),
+      el('button',{class:'ag-btn ghost',onclick:()=>openModal(a)},'Modifier')
+    )
+  );
 }
 
 /* ---------- Météo locale (Open-Meteo, sans clé) ---------- */
@@ -1223,7 +1419,8 @@ function onPopupOpen(e){
 document.getElementById('viewtoggle').addEventListener('click',e=>{
   const b=e.target.closest('.vt'); if(b) setView(b.dataset.view);
 });
-$('f-etat').addEventListener('change',()=>{ if(modalMarker) modalMarker.setIcon(pinIcon(ETAT_COLOR[$('f-etat').value])); });
+$('f-etat').addEventListener('change',()=>{ if(modalMarker) modalMarker.setIcon(modalIcon()); });
+$('f-repondu').addEventListener('change',()=>{ if(modalMarker) modalMarker.setIcon(modalIcon()); });
 
 /* ---------- Démarrage ---------- */
 function hideSplash(){
