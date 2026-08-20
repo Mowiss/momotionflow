@@ -380,12 +380,13 @@ a{color:inherit}
 .viewtoggle .vt:hover{color:#fff}
 .viewtoggle .vt.on{background:var(--hivis);color:var(--hivis-dark)}
 
-.mapview{max-width:1500px;margin:0 auto;padding:14px 18px 40px}
+.mapview{max-width:1500px;margin:0 auto;padding:14px 18px 40px;position:relative}
 .mapview.hidden{display:none}
 .board.hidden{display:none}
 #overview-map{height:calc(100vh - 210px);min-height:440px;border-radius:var(--r);border:1px solid var(--line);box-shadow:var(--sh-1);background:var(--surface-2);position:relative;z-index:0}
-.mapview-empty{height:440px;border-radius:var(--r);border:1px dashed var(--line-strong);display:grid;place-items:center;text-align:center;color:var(--muted);padding:24px;font-size:14px}
-.mapview-empty.hidden{display:none}
+#overview-map.hidden{display:none}
+.map-note{position:absolute;top:26px;left:50%;transform:translateX(-50%);z-index:800;background:rgba(21,32,43,.92);color:#fff;padding:8px 15px;border-radius:999px;font-size:12.5px;font-weight:600;box-shadow:var(--sh-2);pointer-events:none;max-width:80%;text-align:center}
+.map-note.hidden{display:none}
 
 /* marqueur SVG (remplace l'icône PNG Leaflet qui buguait en file:// / CDN) */
 .pin-div{background:transparent;border:0}
@@ -523,7 +524,7 @@ a{color:inherit}
 <!-- ============ VUE CARTE GLOBALE ============ -->
 <section class="mapview hidden" id="mapview">
   <div id="overview-map"></div>
-  <div class="mapview-empty hidden" id="mapview-empty"></div>
+  <div class="map-note hidden" id="map-note"></div>
 </section>
 
 <!-- ============ MODALE AFFAIRE ============ -->
@@ -1104,10 +1105,13 @@ function setView(v){
 
 function renderOverview(){
   const box=document.getElementById('overview-map');
-  const empty=document.getElementById('mapview-empty');
-  const showEmpty=msg=>{ box.classList.add('hidden'); empty.classList.remove('hidden'); empty.textContent=msg; };
+  const note=document.getElementById('map-note');
 
-  if(!window.L){ showEmpty('Carte indisponible (Leaflet non chargé — vérifiez la connexion).'); return; }
+  if(!window.L){
+    note.textContent='Carte indisponible (Leaflet non chargé — vérifiez la connexion).';
+    note.classList.remove('hidden');
+    return;
+  }
 
   if(!overviewMap){
     overviewMap=L.map(box).setView([44.559,6.079],12); // Gap par défaut
@@ -1118,9 +1122,16 @@ function renderOverview(){
   overviewLayer.clearLayers();
 
   const list=affaires.filter(a=>matchesFilters(a) && a.adresse && a.adresse.lat!=null);
-  if(list.length===0){ showEmpty('Aucune affaire géolocalisée à afficher (avec le filtre actuel).'); return; }
+  if(list.length===0){
+    note.textContent=(filterEtat==='__all' && !searchTerm)
+      ? 'Aucune affaire géolocalisée pour le moment.'
+      : 'Aucune affaire géolocalisée avec ce filtre.';
+    note.classList.remove('hidden');
+    setTimeout(()=>overviewMap.invalidateSize(),60);
+    return;
+  }
+  note.classList.add('hidden');
 
-  box.classList.remove('hidden'); empty.classList.add('hidden');
   const pts=[];
   for(const a of list){
     const mk = L.marker([a.adresse.lat,a.adresse.lng],{icon:pinIcon(ETAT_COLOR[a.etat])})
