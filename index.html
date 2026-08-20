@@ -415,7 +415,7 @@ a{color:inherit}
 /* marqueur SVG (remplace l'icône PNG Leaflet qui buguait en file:// / CDN) */
 .pin-div{background:transparent;border:0}
 .pin-wrap{position:relative;width:28px;height:38px}
-.pin-sym{position:absolute;top:6px;left:0;width:28px;text-align:center;font-size:12px;line-height:1;pointer-events:none}
+.pin-sym{position:absolute;top:5px;left:0;width:28px;text-align:center;font-size:16px;line-height:1;pointer-events:none}
 .map-pop{font-family:"Inter",sans-serif;min-width:186px}
 .map-pop .pe{font-family:"IBM Plex Mono";font-size:9.5px;letter-spacing:.5px;text-transform:uppercase;color:#fff;padding:2px 8px;border-radius:999px;display:inline-block;margin-bottom:7px}
 .map-pop h3{font-family:"Space Grotesk";font-size:14.5px;margin:0 0 5px}
@@ -734,12 +734,17 @@ const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,7
    symbol : optionnel, emoji affiché au centre à la place du point blanc (ex. 🕑 pour "répondu"). */
 function pinIcon(color, symbol){
   const c = color || '#0E2A47';
-  const bg = symbol ? `<circle cx="14" cy="13" r="8" fill="#ffffff"/>` : `<circle cx="14" cy="13" r="4.6" fill="#ffffff"/>`;
-  const svgStr = `<svg width="28" height="38" viewBox="0 0 28 38" xmlns="http://www.w3.org/2000/svg"><path d="M14 37S26 22 26 13A12 12 0 0 0 2 13C2 22 14 37 14 37Z" fill="${c}" stroke="#ffffff" stroke-width="2"/>${bg}</svg>`;
-  const sym = symbol ? `<span class="pin-sym">${symbol}</span>` : '';
+  if(symbol){
+    const w=40, h=54;                 // pin agrandi pour bien voir le symbole
+    const top = Math.round(h*13/38 - 12);
+    return L.divIcon({
+      className:'pin-div', iconSize:[w,h], iconAnchor:[w/2,h-1], popupAnchor:[0,-h+8],
+      html:`<div class="pin-wrap" style="width:${w}px;height:${h}px"><svg width="${w}" height="${h}" viewBox="0 0 28 38" xmlns="http://www.w3.org/2000/svg"><path d="M14 37S26 22 26 13A12 12 0 0 0 2 13C2 22 14 37 14 37Z" fill="${c}" stroke="#ffffff" stroke-width="2"/><circle cx="14" cy="13" r="10" fill="#ffffff"/></svg><span class="pin-sym" style="top:${top}px;width:${w}px;font-size:22px">${symbol}</span></div>`
+    });
+  }
   return L.divIcon({
     className:'pin-div', iconSize:[28,38], iconAnchor:[14,37], popupAnchor:[0,-34],
-    html:`<div class="pin-wrap">${svgStr}${sym}</div>`
+    html:`<div class="pin-wrap"><svg width="28" height="38" viewBox="0 0 28 38" xmlns="http://www.w3.org/2000/svg"><path d="M14 37S26 22 26 13A12 12 0 0 0 2 13C2 22 14 37 14 37Z" fill="${c}" stroke="#ffffff" stroke-width="2"/><circle cx="14" cy="13" r="4.6" fill="#ffffff"/></svg></div>`
   });
 }
 
