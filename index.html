@@ -748,6 +748,7 @@ function pinIcon(color, symbol){
 function pinSymbol(a){
   if(a.etat==='En travaux') return '🏗️';
   if(a.etat==='Terminé')    return '💵';
+  if(a.etat==='Sans suite') return '♻️';
   if(a.repondu)             return '🕑';
   return null;
 }
@@ -1193,6 +1194,7 @@ function modalIcon(){
   let sym=null;
   if(etat==='En travaux') sym='🏗️';
   else if(etat==='Terminé') sym='💵';
+  else if(etat==='Sans suite') sym='♻️';
   else if(rep) sym='🕑';
   return pinIcon(pinColor(etat,rep), sym);
 }
@@ -1368,7 +1370,10 @@ function renderOverview(){
 
   if(!overviewMap){
     overviewMap=L.map(box).setView([44.559,6.079],12); // Gap par défaut
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(overviewMap);
+    const plan = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'});
+    const sat  = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Imagerie © Esri, Maxar, Earthstar Geographics'});
+    plan.addTo(overviewMap);
+    L.control.layers({'Plan':plan,'Satellite':sat}, null, {position:'topright'}).addTo(overviewMap);
     overviewLayer=L.layerGroup().addTo(overviewMap);
     overviewMap.on('popupopen', onPopupOpen);
   }
