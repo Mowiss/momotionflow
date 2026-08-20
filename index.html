@@ -204,8 +204,8 @@ a{color:inherit}
 .track{
   flex:1 1 auto;min-width:0;
   overflow-x:auto;overflow-y:hidden;
-  padding:22px 16px 18px;
-  display:flex;align-items:stretch;gap:14px;
+  padding:26px 18px;
+  display:flex;align-items:center;gap:20px;
   position:relative;
   scrollbar-width:thin;scrollbar-color:var(--line-strong) transparent;
 }
@@ -213,7 +213,7 @@ a{color:inherit}
 .track::-webkit-scrollbar-thumb{background:var(--line-strong);border-radius:9px}
 /* SIGNATURE : ligne de balisage haute visibilité derrière les événements */
 .track::before{
-  content:"";position:absolute;left:16px;right:16px;top:17px;height:6px;border-radius:3px;
+  content:"";position:absolute;left:16px;right:16px;top:50%;transform:translateY(-50%);height:6px;border-radius:3px;
   background:repeating-linear-gradient(90deg,var(--hivis) 0 15px,var(--hivis-dark) 15px 30px);
   opacity:.85;pointer-events:none;
 }
@@ -502,6 +502,45 @@ a{color:inherit}
 .ech-line::before{content:"";position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);height:6px;border-radius:3px;background:repeating-linear-gradient(90deg,var(--hivis) 0 15px,var(--hivis-dark) 15px 30px)}
 .ech-line-label{position:relative;z-index:1;background:var(--brand);color:#fff;font-family:"IBM Plex Mono";font-size:11px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;padding:6px 15px;border-radius:999px;box-shadow:var(--sh-1)}
 
+/* ============================================================
+   CHRONO : nœuds d'événement + gros nœud d'ajout
+   ============================================================ */
+.event-node{
+  width:38px;height:38px;border-radius:50%;flex:0 0 auto;position:relative;z-index:1;
+  background:var(--surface);border:3px solid var(--hivis-dark);box-shadow:0 0 0 2px var(--hivis), var(--sh-1);
+  display:grid;place-items:center;font-size:17px;line-height:1;cursor:pointer;transition:transform .1s ease;
+}
+.event-node:hover{transform:scale(1.12)}
+.add-node{
+  width:46px;height:46px;border-radius:50%;flex:0 0 auto;position:relative;z-index:1;
+  background:var(--hivis);color:var(--hivis-dark);border:3px solid var(--hivis-dark);
+  display:grid;place-items:center;font-size:26px;font-weight:700;line-height:1;cursor:pointer;transition:transform .1s ease;
+}
+.add-node:hover{transform:scale(1.08);background:#ffce1f}
+
+/* ============================================================
+   GRANDE MODALE D'ÉVÉNEMENT
+   ============================================================ */
+.ev-modal{width:min(680px,100%)}
+.ev-head-main{display:flex;align-items:center;gap:11px;flex:1;min-width:0}
+.ev-type-badge{font-family:"IBM Plex Mono";font-size:12px;font-weight:600;padding:5px 11px;border-radius:999px;white-space:nowrap;flex:0 0 auto}
+.ev-type-badge.todo{background:#e9f2ff;color:#2563eb}
+.ev-type-badge.doc{background:#fef3e2;color:#b45309}
+.ev-title-input{flex:1;min-width:0;border:0;background:transparent;font-family:"Space Grotesk";font-size:18px;font-weight:600;color:var(--ink);outline:none}
+.ev-title-input::placeholder{color:var(--line-strong);font-weight:500}
+.ev-del-btn{background:transparent;border:0;font-size:15px;color:var(--muted);width:34px;height:34px;border-radius:7px;cursor:pointer;flex:0 0 auto}
+.ev-del-btn:hover{background:#fde8e8;color:var(--danger)}
+.ev-date-row{padding:0 20px 12px;border-bottom:1px solid var(--line)}
+.ev-date-row span{font-size:12px;color:var(--muted)}
+.ev-body{padding:16px 20px 22px}
+.ev-body .notes{padding:0;gap:4px}
+.ev-body .note{padding:8px}
+.ev-body .note-txt{font-size:14px}
+.ev-body .note-add{padding:12px 0 0;margin-top:6px}
+.ev-body .note-input{flex:1;border:1px solid var(--line-strong);border-radius:var(--r-xs);padding:9px 11px;font-size:13.5px;background:var(--surface-2)}
+.ev-body .note-input:focus{outline:none;border-color:var(--brand);background:var(--surface)}
+.doc-text.big{min-height:340px;border:1px solid var(--line-strong);border-radius:var(--r-sm);padding:12px 14px}
+
 @media (max-width:720px){
   .modal-body{grid-template-columns:1fr}
   .lane{flex-direction:column}
@@ -658,6 +697,22 @@ a{color:inherit}
 </div>
 
 <div class="toast" id="toast"></div>
+
+<!-- ============ GRANDE MODALE D'ÉVÉNEMENT ============ -->
+<div class="backdrop hidden" id="ev-backdrop">
+  <div class="modal ev-modal" role="dialog" aria-modal="true">
+    <div class="modal-head">
+      <div class="ev-head-main">
+        <span class="ev-type-badge" id="ev-type-badge"></span>
+        <input id="ev-title" class="ev-title-input" placeholder="Titre de l'événement…" autocomplete="off">
+      </div>
+      <button class="ev-del-btn" id="ev-delete" title="Supprimer l'événement">🗑</button>
+      <button class="close" id="ev-close" aria-label="Fermer">×</button>
+    </div>
+    <div class="ev-date-row"><span id="ev-date" class="mono"></span></div>
+    <div class="ev-body" id="ev-body"></div>
+  </div>
+</div>
 
 <script>
 /* ============================================================================
@@ -871,9 +926,8 @@ function renderLane(a){
   );
 
   const track = el('div',{class:'track', dataset:{id:a.id}});
-  (a.events||[]).forEach(ev => track.append(renderEvent(a, ev)));
-  track.append(el('button',{class:'add-event',onclick:e=>openEventMenu(e.currentTarget,a,track)},
-    el('span',{class:'plus'},'+'),'événement'));
+  (a.events||[]).forEach(ev => track.append(renderEventNode(a, ev)));
+  track.append(el('button',{class:'add-node',title:'Ajouter un événement',onclick:e=>openEventMenu(e.currentTarget,a,track)},'+'));
   if(!a.events || a.events.length===0) track.classList.add('empty');
 
   const lane = el('section',{class:'lane',dataset:{id:a.id}}, head, track);
@@ -881,74 +935,86 @@ function renderLane(a){
   return lane;
 }
 
-function eventSummary(ev){
-  if(ev.type==='doc'){
-    const t=(ev.text||'').trim();
-    if(!t) return 'Document vide';
-    const first=t.split('\n')[0];
-    return first.length>40 ? first.slice(0,40)+'…' : first;
-  }
-  const n=(ev.notes||[]).length, done=(ev.notes||[]).filter(x=>x.done).length;
-  return n===0 ? 'Aucune tâche' : `${done}/${n} fait${done>1?'s':''}`;
+function allDone(ev){ const n=ev.notes||[]; return n.length>0 && n.every(x=>x.done); }
+function eventIcon(ev){
+  if(ev.type==='doc') return '📋';
+  return allDone(ev) ? '✅' : '☑️';
+}
+function eventTitle(ev){
+  if(ev.title && ev.title.trim()) return ev.title.trim();
+  return ev.type==='doc' ? 'Document' : 'To-Do';
+}
+function nodeTooltip(ev){ return fmtTs(ev.ts)+' — '+eventTitle(ev); }
+
+function renderEventNode(a, ev){
+  const node = el('button',{class:'event-node '+(ev.type==='doc'?'doc':'todo'), dataset:{id:ev.id}, title:nodeTooltip(ev)}, eventIcon(ev));
+  node.addEventListener('click',()=>openEventModal(a,ev));
+  return node;
+}
+function refreshEventNode(ev){
+  const n=document.querySelector(`.event-node[data-id="${ev.id}"]`);
+  if(n){ n.textContent=eventIcon(ev); n.title=nodeTooltip(ev); }
 }
 
-function renderEvent(a, ev){
+/* ---------- Grande modale d'un événement (To-Do ou Document) ---------- */
+let evEditing=null, _pt;
+function persistDebounced(){ clearTimeout(_pt); _pt=setTimeout(persist,400); }
+
+function openEventModal(a, ev){
+  evEditing={a,ev};
   const isDoc = ev.type==='doc';
-  const collapsed = ev.collapsed ?? true;
+  const badge = document.getElementById('ev-type-badge');
+  badge.className='ev-type-badge '+(isDoc?'doc':'todo');
+  badge.textContent = isDoc ? '📋 Document' : (allDone(ev)?'✅ To-Do':'☑️ To-Do');
 
-  const time = el('time',{class:'ts mono',datetime:ev.ts,title:'Cliquer pour modifier la date'}, fmtTs(ev.ts));
-  time.addEventListener('click',e=>{ e.stopPropagation(); editTs(ev,time); });
+  const ti = document.getElementById('ev-title');
+  ti.value = ev.title||'';
+  ti.oninput = ()=>{ ev.title=ti.value; persistDebounced(); refreshEventNode(ev); };
 
-  const toggle  = el('button',{class:'ev-toggle',title:'Plier / déplier'}, collapsed?'▸':'▾');
-  const typeIc  = el('span',{class:'ev-type-ic '+(isDoc?'doc':'todo'),title:isDoc?'Document':'To-Do'}, isDoc?'📄':'✓');
-  const summary = el('span',{class:'ev-summary'}, eventSummary(ev));
-  const delBtn  = el('button',{class:'ev-del',title:'Supprimer'},'×');
+  document.getElementById('ev-date').textContent = fmtTs(ev.ts);
 
-  const top = el('div',{class:'event-top'}, toggle, typeIc, time, summary, delBtn);
-
-  let body;
+  const body = document.getElementById('ev-body'); body.innerHTML=''; body.onchange=null;
   if(isDoc){
-    const ta = el('textarea',{class:'doc-text',placeholder:'Collez ou saisissez vos informations…',rows:6});
+    const ta = el('textarea',{class:'doc-text big',placeholder:'Collez ou saisissez vos informations…'});
     ta.value = ev.text||'';
-    let t;
-    ta.addEventListener('input',()=>{ ev.text=ta.value; summary.textContent=eventSummary(ev); clearTimeout(t); t=setTimeout(persist,400); });
-    ta.addEventListener('click',e=>e.stopPropagation());
-    body = el('div',{class:'event-body'}, ta);
+    ta.addEventListener('input',()=>{ ev.text=ta.value; persistDebounced(); });
+    body.append(ta);
   }else{
     const notes = el('ul',{class:'notes'});
     (ev.notes||[]).forEach(nt=>notes.append(renderNote(a,ev,nt)));
-    const input = el('input',{type:'text',placeholder:'Ajouter une note…',
-      onkeydown:e=>{ if(e.key==='Enter'){ e.preventDefault(); commitNote(); } }, onclick:e=>e.stopPropagation()});
-    const commitNote = ()=>{
-      const txt=input.value.trim(); if(!txt) return;
-      const nt={id:uid(),text:txt,done:false}; ev.notes=ev.notes||[]; ev.notes.push(nt); persist();
-      notes.append(renderNote(a,ev,nt)); input.value=''; input.focus(); summary.textContent=eventSummary(ev);
+    const input = el('input',{class:'note-input',type:'text',placeholder:'Ajouter une tâche…',
+      onkeydown:e=>{ if(e.key==='Enter'){ e.preventDefault(); addNote(); } }});
+    const addNote = ()=>{
+      const t=input.value.trim(); if(!t) return;
+      const nt={id:uid(),text:t,done:false}; ev.notes=ev.notes||[]; ev.notes.push(nt); persist();
+      notes.append(renderNote(a,ev,nt)); input.value=''; input.focus();
+      badge.textContent = allDone(ev)?'✅ To-Do':'☑️ To-Do'; refreshEventNode(ev);
     };
-    body = el('div',{class:'event-body'}, notes,
-      el('div',{class:'note-add'}, input, el('button',{title:'Ajouter la note',onclick:commitNote},'+')));
+    body.append(notes, el('div',{class:'note-add'}, input, el('button',{title:'Ajouter la tâche',onclick:addNote},'+')));
+    body.onchange = ()=>{ badge.textContent = allDone(ev)?'✅ To-Do':'☑️ To-Do'; refreshEventNode(ev); };
   }
 
-  const art = el('article',{class:'event'+(collapsed?' collapsed':''), dataset:{id:ev.id}}, top, body);
-
-  function toggleCollapse(){
-    const now = !art.classList.contains('collapsed');
-    art.classList.toggle('collapsed', now);
-    ev.collapsed = now; persist();
-    toggle.textContent = now?'▸':'▾';
-    summary.textContent = eventSummary(ev);
-  }
-  toggle.addEventListener('click',e=>{ e.stopPropagation(); toggleCollapse(); });
-  typeIc.addEventListener('click',e=>{ e.stopPropagation(); toggleCollapse(); });
-  top.addEventListener('click',()=>toggleCollapse());
-  delBtn.addEventListener('click',e=>{
-    e.stopPropagation();
-    if(confirm('Supprimer cet événement ?')){
-      a.events=a.events.filter(x=>x.id!==ev.id); persist();
-      const track=art.closest('.track'); art.remove();
-      if(track && (!a.events || a.events.length===0)) track.classList.add('empty');
-    }
-  });
-  return art;
+  document.getElementById('ev-backdrop').classList.remove('hidden');
+  setTimeout(()=>{ const f = isDoc ? body.querySelector('textarea') : ti; if(f) f.focus(); },80);
+}
+function closeEventModal(){
+  persist();
+  const ev = evEditing && evEditing.ev;
+  document.getElementById('ev-backdrop').classList.add('hidden');
+  if(ev) refreshEventNode(ev);
+  evEditing=null;
+}
+function deleteEventFromModal(){
+  if(!evEditing) return;
+  if(!confirm('Supprimer cet événement ?')) return;
+  const {a,ev}=evEditing;
+  a.events=a.events.filter(x=>x.id!==ev.id); persist();
+  const lane=document.querySelector(`.lane[data-id="${a.id}"]`);
+  const track=lane && lane.querySelector('.track');
+  const node=track && track.querySelector(`.event-node[data-id="${ev.id}"]`);
+  if(node) node.remove();
+  if(track && (!a.events||a.events.length===0)) track.classList.add('empty');
+  document.getElementById('ev-backdrop').classList.add('hidden'); evEditing=null;
 }
 
 function renderNote(a, ev, nt){
@@ -964,31 +1030,18 @@ function renderNote(a, ev, nt){
   return li;
 }
 
-/* modifier l'horodatage en cliquant dessus */
-function editTs(ev, timeEl){
-  const inp = el('input',{type:'datetime-local',class:'ts-input',value:toLocalInput(ev.ts)});
-  timeEl.replaceWith(inp); inp.focus();
-  const commit = ()=>{
-    if(inp.value){ ev.ts = new Date(inp.value).toISOString(); persist(); }
-    timeEl.textContent = fmtTs(ev.ts); timeEl.setAttribute('datetime',ev.ts);
-    inp.replaceWith(timeEl);
-  };
-  inp.addEventListener('blur',commit);
-  inp.addEventListener('keydown',e=>{ if(e.key==='Enter'){inp.blur();} if(e.key==='Escape'){inp.replaceWith(timeEl);} });
-}
-
 /* ============================================================================
    ACTIONS
    ============================================================================ */
 function addEvent(a, track, type='todo'){
-  const ev = {id:uid(), ts:new Date().toISOString(), type, collapsed:false};
+  const ev = {id:uid(), ts:new Date().toISOString(), type, title:''};
   if(type==='doc') ev.text=''; else ev.notes=[];
   a.events = a.events||[]; a.events.push(ev); persist();
   track.classList.remove('empty');
-  const node = renderEvent(a, ev);
-  track.insertBefore(node, track.querySelector('.add-event'));
+  const node = renderEventNode(a, ev);
+  track.insertBefore(node, track.querySelector('.add-node'));
   track.scrollTo({left:track.scrollWidth, behavior:'smooth'});
-  setTimeout(()=>{ const f=node.querySelector('textarea, .note-add input'); if(f) f.focus(); },200);
+  openEventModal(a, ev);
 }
 
 /* menu flottant : Nouvelle To-Do / Nouveau Document */
@@ -997,10 +1050,10 @@ function openEventMenu(anchorEl, a, track){
   closeEventMenu();
   const menu = el('div',{class:'evt-menu'},
     el('button',{class:'evt-menu-item',onclick:()=>{ closeEventMenu(); addEvent(a,track,'todo'); }},
-      el('span',{class:'emi-ic todo'},'✓'),
+      el('span',{class:'emi-ic todo'},'☑️'),
       el('div',{}, el('b',{},'Nouvelle To-Do'), el('span',{class:'emi-sub'},'liste de tâches à cocher'))),
     el('button',{class:'evt-menu-item',onclick:()=>{ closeEventMenu(); addEvent(a,track,'doc'); }},
-      el('span',{class:'emi-ic doc'},'📄'),
+      el('span',{class:'emi-ic doc'},'📋'),
       el('div',{}, el('b',{},'Nouveau Document'), el('span',{class:'emi-sub'},'texte libre / copier-coller')))
   );
   document.body.append(menu);
@@ -1203,6 +1256,13 @@ $('modal-save').onclick = saveModal;
 $('f-geoloc').onclick   = geocodeAddress;
 backdrop.addEventListener('click',e=>{ if(e.target===backdrop) closeModal(); });
 document.addEventListener('keydown',e=>{ if(e.key==='Escape' && !backdrop.classList.contains('hidden')) closeModal(); });
+
+/* modale d'événement */
+$('ev-close').onclick = closeEventModal;
+$('ev-delete').onclick = deleteEventFromModal;
+const evBackdrop = $('ev-backdrop');
+evBackdrop.addEventListener('click',e=>{ if(e.target===evBackdrop) closeEventModal(); });
+document.addEventListener('keydown',e=>{ if(e.key==='Escape' && !evBackdrop.classList.contains('hidden')) closeEventModal(); });
 
 $('btn-export').onclick = exportJSON;
 $('btn-import').onclick = ()=>$('file-import').click();
