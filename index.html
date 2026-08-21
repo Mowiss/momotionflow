@@ -146,6 +146,8 @@ a{color:inherit}
 .chip.on{color:#fff;background:var(--c,var(--brand));border-color:transparent}
 .chip.on .dot{color:#fff;opacity:.9}
 .chip.all.on{background:var(--brand);--c:var(--brand)}
+.chip.ao-rep{--c:#38BDF8}
+.ao-ind{font-size:12px}
 
 .count{margin-left:auto;font-family:"IBM Plex Mono";font-size:12px;color:var(--muted)}
 
@@ -607,7 +609,7 @@ a{color:inherit}
 <!-- ============ FILTRES ============ -->
 <div class="filters" id="filters">
   <span class="lbl">États</span>
-  <button class="chip on" data-etat="Appel d'offre"><span class="dot"></span>Appel d'offre</button>
+  <button class="chip on" data-etat="Appel d'offre" title="Cycle : tous → non répondu → répondu → masqués"><span class="dot"></span><span class="chip-label">Appel d'offre</span><span class="ao-ind"></span></button>
   <button class="chip on" data-etat="En étude"><span class="dot"></span>En étude</button>
   <button class="chip on" data-etat="En travaux"><span class="dot"></span>En travaux</button>
   <button class="chip on" data-etat="Terminé"><span class="dot"></span>Terminé</button>
@@ -793,6 +795,7 @@ const Store = {
 /* ---------- État applicatif ---------- */
 let affaires = Store.load();
 let activeEtats = new Set(ETATS);
+let aoMode = 0;   // 0 tous · 1 non répondu · 2 répondu · 3 masqués
 let searchTerm = '';
 const persist = () => Store.saveAll(affaires);
 
@@ -879,7 +882,13 @@ const toLocalInput = iso => { // -> valeur pour <input type=datetime-local>
 const board = document.getElementById('board');
 
 function matchesFilters(a){
-  if(!activeEtats.has(a.etat)) return false;
+  if(a.etat==="Appel d'offre"){
+    if(aoMode===3) return false;               // masqués
+    if(aoMode===1 && a.repondu) return false;  // non répondu seulement
+    if(aoMode===2 && !a.repondu) return false; // répondu seulement
+  }else if(!activeEtats.has(a.etat)){
+    return false;
+  }
   if(searchTerm){
     const hay = [a.nom, a.adresse?.text, a.client?.entreprise, a.client?.contact].join(' ').toLowerCase();
     if(!hay.includes(searchTerm)) return false;
@@ -1336,11 +1345,24 @@ $('file-import').addEventListener('change',e=>{ if(e.target.files[0]) importJSON
 
 $('search').addEventListener('input',e=>{ searchTerm=e.target.value.trim().toLowerCase(); renderAll(); if(currentView==='map') renderOverview(); });
 
+function updateAoChip(){
+  const chip=document.querySelector('.chip[data-etat="Appel d\'offre"]');
+  if(!chip) return;
+  const ind=chip.querySelector('.ao-ind');
+  chip.classList.toggle('on', aoMode!==3);
+  chip.classList.toggle('ao-rep', aoMode===2);
+  if(ind) ind.textContent = aoMode===1 ? ' 📥' : aoMode===2 ? ' 🕑' : '';
+}
+
 document.getElementById('filters').addEventListener('click',e=>{
   const chip=e.target.closest('.chip'); if(!chip) return;
-  const et=chip.dataset.etat;
-  if(activeEtats.has(et)) activeEtats.delete(et); else activeEtats.add(et);
-  chip.classList.toggle('on', activeEtats.has(et));
+  if(chip.dataset.etat==="Appel d'offre"){
+    aoMode=(aoMode+1)%4; updateAoChip();
+  }else{
+    const et=chip.dataset.etat;
+    if(activeEtats.has(et)) activeEtats.delete(et); else activeEtats.add(et);
+    chip.classList.toggle('on', activeEtats.has(et));
+  }
   renderAll();
   if(currentView==='map') renderOverview();
   if(currentView==='agenda') renderAgenda();
@@ -1443,7 +1465,8 @@ function renderAgenda(){
   const today=new Date(); today.setHours(0,0,0,0);
   const dOf=a=>{ const d=new Date(a.echeance+'T00:00:00'); d.setHours(0,0,0,0); return d; };
   const CLOSED=new Set(["Sans suite","Terminé"]);
-  const items=affaires.filter(a=>a.echeance && !a.repondu && !CLOSED.has(a.etat) && activeEtats.has(a.etat));
+  const items=affaires.filter(a=>a.echeance && !a.repondu && !CLOSED.has(a.etat)
+    && (a.etat==="Appel d'offre" ? (aoMode!==2 && aoMode!==3) : activeEtats.has(a.etat)));
 
   if(items.length===0){
     wrap.append(el('div',{class:'agenda-empty'},
@@ -1560,6 +1583,7 @@ function hideSplash(){
 }
 
 renderAll();
+updateAoChip();
 setView('map');   // on arrive directement sur la carte
 
 if(overviewMap) overviewMap.whenReady(()=>setTimeout(hideSplash,450));
