@@ -1496,12 +1496,30 @@ function renderOverview(){
     const topo   = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',{maxZoom:19,maxNativeZoom:17,attribution:'© OpenTopoMap (CC-BY-SA), © OpenStreetMap'});
     plan.addTo(overviewMap);
 
-    // surcouche cadastre (IGN Géoplateforme) — transparente, se cumule au fond
-    const cadastre = L.tileLayer('https://data.geopf.fr/wmts?SERVICE=WMTS&VERSION=1.0.0&REQUEST=GetTile&LAYER=CADASTRALPARCELS.PARCELLAIRE_EXPRESS&STYLE=normal&TILEMATRIXSET=PM&FORMAT=image/png&TILEMATRIX={z}&TILECOL={x}&TILEROW={y}',{maxZoom:20,maxNativeZoom:19,attribution:'Cadastre © IGN / DGFiP — Géoplateforme'});
+    // helpers Géoplateforme IGN (fiables)
+    const geopfWMTS=(layer,fmt)=>L.tileLayer(
+      `https://data.geopf.fr/wmts?SERVICE=WMTS&VERSION=1.0.0&REQUEST=GetTile&LAYER=${layer}&STYLE=normal&TILEMATRIXSET=PM&FORMAT=${fmt||'image/png'}&TILEMATRIX={z}&TILECOL={x}&TILEROW={y}`,
+      {maxZoom:20,maxNativeZoom:19,attribution:'IGN — Géoplateforme'});
+    const wms=(url,layers,attr)=>L.tileLayer.wms(url,{layers,format:'image/png',transparent:true,version:'1.3.0',attribution:attr||''});
+
+    // fonds IGN supplémentaires
+    const ortho   = geopfWMTS('ORTHOIMAGERY.ORTHOPHOTOS','image/jpeg');
+    const planIgn = geopfWMTS('GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2','image/png');
+
+    // surcouches
+    const cadastre = geopfWMTS('CADASTRALPARCELS.PARCELLAIRE_EXPRESS','image/png');
+    const pentes   = geopfWMTS('GEOGRAPHICALGRIDSYSTEMS.SLOPES.MOUNTAIN','image/png'); pentes.setOpacity(0.6);
+    const admin    = wms('https://data.geopf.fr/wms-r/wms','ADMINEXPRESS-COG-CARTO.LATEST','IGN');
+    const geol     = wms('https://geoservices.brgm.fr/geologie','GEOLOGIE','BRGM');
 
     L.control.layers(
-      {'Plan':plan,'Satellite':sat,'Topographique':topo},
-      {'Cadastre (IGN)':cadastre},
+      {'Plan':plan,'Satellite':sat,'Topographique':topo,'Ortho IGN':ortho,'Plan IGN':planIgn},
+      {
+        'Cadastre (IGN)':cadastre,
+        'Pentes (IGN)':pentes,
+        'Limites communes (IGN)':admin,
+        'Géologie BRGM (test)':geol
+      },
       {position:'topright'}
     ).addTo(overviewMap);
     overviewLayer=L.layerGroup().addTo(overviewMap);
