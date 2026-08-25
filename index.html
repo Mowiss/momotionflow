@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MOMOtion Flow — Suivi d'affaires</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏗️</text></svg>">
 
 <!-- Leaflet (OpenStreetMap) via CDN -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
@@ -1396,10 +1397,19 @@ function renderOverview(){
 
   if(!overviewMap){
     overviewMap=L.map(box).setView([44.559,6.079],12); // Gap par défaut
-    const plan = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'});
-    const sat  = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Imagerie © Esri, Maxar, Earthstar Geographics'});
+    const plan   = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'});
+    const sat    = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Imagerie © Esri, Maxar, Earthstar Geographics'});
+    const topo   = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',{maxZoom:19,maxNativeZoom:17,attribution:'© OpenTopoMap (CC-BY-SA), © OpenStreetMap'});
     plan.addTo(overviewMap);
-    L.control.layers({'Plan':plan,'Satellite':sat}, null, {position:'topright'}).addTo(overviewMap);
+
+    // surcouche cadastre (IGN Géoplateforme) — transparente, se cumule au fond
+    const cadastre = L.tileLayer('https://data.geopf.fr/wmts?SERVICE=WMTS&VERSION=1.0.0&REQUEST=GetTile&LAYER=CADASTRALPARCELS.PARCELLAIRE_EXPRESS&STYLE=normal&TILEMATRIXSET=PM&FORMAT=image/png&TILEMATRIX={z}&TILECOL={x}&TILEROW={y}',{maxZoom:20,maxNativeZoom:19,attribution:'Cadastre © IGN / DGFiP — Géoplateforme'});
+
+    L.control.layers(
+      {'Plan':plan,'Satellite':sat,'Topographique':topo},
+      {'Cadastre (IGN)':cadastre},
+      {position:'topright'}
+    ).addTo(overviewMap);
     overviewLayer=L.layerGroup().addTo(overviewMap);
     overviewMap.on('popupopen', onPopupOpen);
   }
