@@ -984,6 +984,15 @@ function matchesFilters(a){
   return true;
 }
 
+/* Compteur : les affaires Terminé / Sans suite ne comptent pas */
+const CLOSED_ETATS = new Set(["Terminé","Sans suite"]);
+function updateCount(){
+  const active = affaires.filter(a=>!CLOSED_ETATS.has(a.etat));
+  const shown  = active.filter(matchesFilters);
+  document.getElementById('count').textContent =
+    `${shown.length} / ${active.length} affaire${active.length>1?'s':''}`;
+}
+
 function renderAll(){
   // mémoriser le scroll horizontal de chaque piste
   const scroll = {};
@@ -991,8 +1000,7 @@ function renderAll(){
 
   board.innerHTML='';
   const list = affaires.filter(matchesFilters);
-  document.getElementById('count').textContent =
-    `${list.length} / ${affaires.length} affaire${affaires.length>1?'s':''}`;
+  updateCount();
 
   if(affaires.length===0){
     board.append(el('div',{class:'empty-state'},
@@ -1224,8 +1232,7 @@ function deleteAffaire(a){
   affaires = affaires.filter(x=>x.id!==a.id); persist();
   const lane = board.querySelector(`.lane[data-id="${a.id}"]`);
   if(lane) lane.remove();
-  document.getElementById('count').textContent =
-    `${affaires.filter(matchesFilters).length} / ${affaires.length} affaire${affaires.length>1?'s':''}`;
+  updateCount();
   if(affaires.length===0) renderAll();
   if(currentView==='map') renderOverview();
   if(currentView==='agenda') renderAgenda();
