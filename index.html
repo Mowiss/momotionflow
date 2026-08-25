@@ -559,7 +559,6 @@ a{color:inherit}
 .tools-handle:hover{background:var(--brand-700)}
 .tools-handle{transition:left .25s ease}
 .tools-handle.open{left:min(340px,88vw)}
-.link-form[hidden]{display:none}
 .tools-drawer{
   position:fixed;left:0;top:0;bottom:0;width:340px;max-width:88vw;
   background:var(--surface);border-right:1px solid var(--line);box-shadow:var(--sh-2);
@@ -579,25 +578,9 @@ a{color:inherit}
 .tools-pane.on{display:block}
 .notes-area{width:100%;min-height:calc(100vh - 210px);border:1px solid var(--line-strong);border-radius:var(--r-sm);padding:12px;font-family:inherit;font-size:14px;line-height:1.55;resize:vertical;outline:none;background:var(--surface-2)}
 .notes-area:focus{background:var(--surface);border-color:var(--brand)}
-.notes-toolbar{display:flex;justify-content:flex-end;margin-bottom:8px}
-.notes-print{background:var(--surface);border:1px solid var(--line-strong);border-radius:var(--r-xs);padding:6px 11px;font-size:12.5px;font-weight:600;color:var(--brand);cursor:pointer}
-.notes-print:hover{background:var(--surface-2)}
 .links-list{display:flex;flex-direction:column;gap:8px}
 .link-btn{display:flex;align-items:center;gap:8px;border:0;border-radius:var(--r-sm);padding:11px 12px;color:#fff;font-weight:600;font-size:13.5px;cursor:pointer;text-align:left;box-shadow:var(--sh-1)}
 .link-btn .lk-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-shadow:0 1px 1px rgba(0,0,0,.25)}
-.link-del{opacity:0;background:rgba(0,0,0,.22);border:0;color:#fff;width:22px;height:22px;border-radius:6px;cursor:pointer;font-size:14px;line-height:1;flex:0 0 auto}
-.link-btn:hover .link-del{opacity:1}
-.add-link{margin-top:10px;background:transparent;border:1px dashed var(--line-strong);color:var(--muted);width:30px;height:30px;border-radius:8px;font-size:17px;line-height:1;cursor:pointer;display:grid;place-items:center}
-.add-link:hover{border-color:var(--brand);color:var(--brand)}
-.link-form{margin-top:10px;border:1px solid var(--line);border-radius:var(--r-sm);padding:12px;display:flex;flex-direction:column;gap:9px;background:var(--surface-2)}
-.link-form input[type=text],.link-form input[type=url]{border:1px solid var(--line-strong);border-radius:var(--r-xs);padding:8px 10px;font-size:13px;background:var(--surface);font-family:inherit}
-.link-form input:focus{outline:none;border-color:var(--brand)}
-.link-form .lf-color-row{display:flex;align-items:center;gap:9px;font-size:12.5px;color:var(--muted)}
-.link-form input[type=color]{width:42px;height:30px;border:1px solid var(--line-strong);border-radius:6px;background:none;cursor:pointer;padding:2px}
-.link-form .actions{display:flex;gap:8px;justify-content:flex-end}
-.lf-save{background:var(--brand);color:#fff;border:1px solid var(--brand);border-radius:var(--r-xs);padding:7px 13px;font-weight:600;font-size:13px;cursor:pointer}
-.lf-save:hover{background:var(--brand-700)}
-.lf-cancel{background:var(--surface);border:1px solid var(--line-strong);border-radius:var(--r-xs);padding:7px 13px;font-weight:600;font-size:13px;cursor:pointer;color:var(--muted)}
 
 /* ============================================================
    MINI-ÉDITEUR ENRICHI (bloc-notes + documents)
@@ -609,6 +592,7 @@ a{color:inherit}
 .rt-btn.b{font-weight:800}
 .rt-btn.i{font-style:italic;font-family:Georgia,serif}
 .rt-btn.u{text-decoration:underline}
+.rt-print{margin-left:auto;width:auto;padding:0 10px;font-size:12.5px;font-weight:600;color:var(--brand);gap:5px}
 .rt-edit{padding:11px 12px;min-height:120px;outline:none;font-size:14px;line-height:1.55;white-space:pre-wrap;overflow:auto;word-break:break-word}
 .rt-edit:empty::before{content:attr(data-ph);color:var(--muted);pointer-events:none}
 .rt-edit ul{margin:6px 0;padding-left:22px}
@@ -647,25 +631,19 @@ a{color:inherit}
   </div>
   <div class="tools-tabs">
     <button class="tools-tab" data-tab="notes">Bloc-notes</button>
+    <button class="tools-tab" data-tab="todos">To-Do</button>
     <button class="tools-tab on" data-tab="links">Liens utiles</button>
   </div>
   <div class="tools-body">
     <div class="tools-pane" data-pane="notes">
-      <div class="notes-toolbar"><button class="notes-print" id="notes-print" title="Imprimer le bloc-notes">🖨 Imprimer</button></div>
       <div id="notes-mount"></div>
+    </div>
+    <div class="tools-pane" data-pane="todos">
+      <ul class="notes" id="todos-list"></ul>
+      <div class="note-add"><input id="todo-input" type="text" placeholder="Nouvelle tâche…"><button id="todo-add" title="Ajouter">+</button></div>
     </div>
     <div class="tools-pane on" data-pane="links">
       <div class="links-list" id="links-list"></div>
-      <button class="add-link" id="add-link-btn" title="Ajouter un lien">＋</button>
-      <div class="link-form" id="link-form" hidden>
-        <input type="text" id="lf-name" placeholder="Nom du lien">
-        <input type="url" id="lf-url" placeholder="https://…">
-        <div class="lf-color-row">Couleur <input type="color" id="lf-color" value="#0E2A47"></div>
-        <div class="actions">
-          <button class="lf-cancel" id="lf-cancel">Annuler</button>
-          <button class="lf-save" id="lf-save">Ajouter</button>
-        </div>
-      </div>
     </div>
   </div>
 </aside>
@@ -1734,15 +1712,33 @@ function openLink(url){
   if(!/^https?:\/\//i.test(u)) u='https://'+u;
   window.open(u,'_blank','noopener');
 }
+const FIXED_LINKS = [
+  {name:'Mapulator©',     url:'https://mowiss.github.io/Mapulator/',      color:'#EA580C'},
+  {name:'Balizator©',     url:'https://mowiss.github.io/Balisator/',      color:'#F4C20D'},
+  {name:"Gantt'O'matiC©", url:'https://mowiss.github.io/Ganttomatic/',    color:'#16A34A'},
+  {name:'Devizore©',      url:'https://mowiss.github.io/Devisaurus-REX/', color:'#7C3AED'},
+  {name:'MOMOcad©',       url:'https://mowiss.github.io/Momocad/',        color:'#2563EB'},
+  {name:'MOMOdificator©', url:'https://mowiss.github.io/MOMOdificator/',  color:'#1C1C1C'}
+];
+function textOn(hex){
+  const c=hex.replace('#',''); const r=parseInt(c.substr(0,2),16),g=parseInt(c.substr(2,2),16),b=parseInt(c.substr(4,2),16);
+  return (0.299*r+0.587*g+0.114*b)/255 > 0.62 ? '#1c1c1c' : '#fff';
+}
 function renderLinks(){
   const box=document.getElementById('links-list'); box.innerHTML='';
-  (tools.links||[]).forEach(lk=>{
-    const del=el('button',{class:'link-del',title:'Supprimer',onclick:e=>{
-      e.stopPropagation(); tools.links=tools.links.filter(x=>x.id!==lk.id); saveTools(); renderLinks();
-    }},'×');
-    const btn=el('button',{class:'link-btn',style:`background:${lk.color||'#0E2A47'}`,title:lk.url,
-      onclick:()=>openLink(lk.url)}, el('span',{class:'lk-name'}, lk.name||lk.url), del);
-    box.append(btn);
+  FIXED_LINKS.forEach(lk=>{
+    box.append(el('button',{class:'link-btn',style:`background:${lk.color};color:${textOn(lk.color)}`,title:lk.url,
+      onclick:()=>openLink(lk.url)}, el('span',{class:'lk-name'}, lk.name)));
+  });
+}
+function renderTodos(){
+  const box=document.getElementById('todos-list'); box.innerHTML='';
+  (tools.todos||[]).forEach(t=>{
+    const cb=el('input',{type:'checkbox'}); cb.checked=!!t.done;
+    const del=el('button',{class:'note-del',title:'Supprimer',onclick:()=>{ tools.todos=tools.todos.filter(x=>x.id!==t.id); saveTools(); renderTodos(); }},'×');
+    const li=el('li',{class:'note'+(t.done?' done':'')}, el('label',{}, cb, el('span',{class:'note-txt'},t.text)), del);
+    cb.addEventListener('change',()=>{ t.done=cb.checked; saveTools(); li.classList.toggle('done',t.done); });
+    box.append(li);
   });
 }
 function initTools(){
@@ -1758,26 +1754,24 @@ function initTools(){
     document.querySelectorAll('.tools-pane').forEach(p=>p.classList.toggle('on',p.dataset.pane===name));
   });
 
+  // bloc-notes enrichi (bouton Imprimer intégré à la barre d'édition)
   let nt;
   const notesEd = makeRichEditor(tools.notes||'', html=>{ tools.notes=html; clearTimeout(nt); nt=setTimeout(saveTools,400); });
   notesEd.editor.classList.add('rt-notes');
   notesEd.editor.setAttribute('data-ph','Bloc-notes…');
+  notesEd.wrap.querySelector('.rt-bar').append(
+    el('button',{class:'rt-btn rt-print',type:'button',title:'Imprimer',onclick:printNotes},'🖨 Imprimer'));
   document.getElementById('notes-mount').append(notesEd.wrap);
-  document.getElementById('notes-print').onclick=printNotes;
 
+  // to-do
+  const tin=document.getElementById('todo-input');
+  const addTodo=()=>{ const t=tin.value.trim(); if(!t) return; tools.todos=tools.todos||[]; tools.todos.push({id:uid(),text:t,done:false}); saveTools(); renderTodos(); tin.value=''; tin.focus(); };
+  document.getElementById('todo-add').onclick=addTodo;
+  tin.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); addTodo(); } });
+  renderTodos();
+
+  // liens fixes
   renderLinks();
-  const form=document.getElementById('link-form');
-  const clear=()=>{ document.getElementById('lf-name').value=''; document.getElementById('lf-url').value=''; document.getElementById('lf-color').value='#0E2A47'; };
-  document.getElementById('add-link-btn').onclick=()=>{ form.hidden=!form.hidden; if(!form.hidden) document.getElementById('lf-name').focus(); };
-  document.getElementById('lf-cancel').onclick=()=>{ form.hidden=true; clear(); };
-  document.getElementById('lf-save').onclick=()=>{
-    const name=document.getElementById('lf-name').value.trim();
-    const url=document.getElementById('lf-url').value.trim();
-    const color=document.getElementById('lf-color').value;
-    if(!name || !url){ toast('Nom et lien requis'); return; }
-    tools.links=tools.links||[]; tools.links.push({id:uid(),name,url,color}); saveTools();
-    renderLinks(); form.hidden=true; clear();
-  };
 }
 
 /* ---------- Démarrage ---------- */
