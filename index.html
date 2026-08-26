@@ -599,6 +599,50 @@ a{color:inherit}
 .rt-edit.rt-notes{min-height:calc(100vh - 262px)}
 .rt-edit.rt-doc{min-height:320px}
 
+/* ============================================================
+   CARNET D'ADRESSES (tiroir droit) + autocomplétion
+   ============================================================ */
+.carnet-handle{position:fixed;right:0;top:50%;transform:translateY(-50%);z-index:43;background:var(--brand);color:#fff;border:0;cursor:pointer;padding:16px 9px;border-radius:11px 0 0 11px;box-shadow:var(--sh-2);writing-mode:vertical-rl;text-orientation:mixed;font-family:"Space Grotesk";font-weight:600;font-size:13px;letter-spacing:1.5px;transition:right .25s ease}
+.carnet-handle:hover{background:var(--brand-700)}
+.carnet-handle.open{right:min(360px,90vw)}
+.carnet-drawer{position:fixed;right:0;top:0;bottom:0;width:360px;max-width:90vw;background:var(--surface);border-left:1px solid var(--line);box-shadow:var(--sh-2);z-index:4000;transform:translateX(100%);transition:transform .25s ease;display:flex;flex-direction:column}
+.carnet-drawer.open{transform:none}
+.ctab{flex:1;border:1px solid var(--line-strong);background:var(--surface);border-radius:var(--r-sm);padding:8px;font-weight:600;font-size:13px;color:var(--muted);cursor:pointer}
+.ctab.on{background:var(--brand);color:#fff;border-color:var(--brand)}
+.carnet-pane{display:none}
+.carnet-pane.on{display:block}
+.add-contact{width:100%;background:transparent;border:1px dashed var(--line-strong);color:var(--muted);border-radius:var(--r-sm);padding:9px;font-weight:600;font-size:13px;cursor:pointer;margin-bottom:10px}
+.add-contact:hover{border-color:var(--brand);color:var(--brand)}
+.contact-list{display:flex;flex-direction:column;gap:9px}
+.contact-card{border:1px solid var(--line);border-radius:var(--r-sm);padding:11px 12px 11px;background:var(--surface);box-shadow:var(--sh-1);position:relative}
+.contact-card h3{font-family:"Space Grotesk";font-size:14.5px;margin:0 0 2px;padding-right:56px}
+.contact-card .soc{font-size:12.5px;color:var(--ink);font-weight:600}
+.contact-card .sect{font-size:11.5px;color:var(--muted);margin-top:1px}
+.contact-card .cc-row{display:flex;gap:6px;align-items:center;font-size:12.5px;color:var(--muted);margin-top:4px}
+.contact-card a{color:var(--brand);text-decoration:none;font-weight:500}
+.contact-card a:hover{text-decoration:underline}
+.cc-actions{position:absolute;top:8px;right:8px;display:flex;gap:3px}
+.cc-actions button{background:transparent;border:0;cursor:pointer;width:26px;height:26px;border-radius:6px;color:var(--muted);font-size:13px}
+.cc-actions button:hover{background:var(--surface-2);color:var(--ink)}
+.cc-actions .del:hover{background:#fde8e8;color:var(--danger)}
+.contact-form{border:1px solid var(--line);border-radius:var(--r-sm);padding:12px;background:var(--surface-2);margin-bottom:12px;display:flex;flex-direction:column;gap:8px}
+.contact-form[hidden]{display:none}
+.contact-form input{border:1px solid var(--line-strong);border-radius:var(--r-xs);padding:8px 10px;font-size:13px;background:var(--surface);font-family:inherit}
+.contact-form input:focus{outline:none;border-color:var(--brand)}
+.cf-actions{display:flex;gap:8px;justify-content:flex-end}
+.cf-save{background:var(--brand);color:#fff;border:1px solid var(--brand);border-radius:var(--r-xs);padding:7px 13px;font-weight:600;font-size:13px;cursor:pointer}
+.cf-save:hover{background:var(--brand-700)}
+.cf-cancel{background:var(--surface);border:1px solid var(--line-strong);border-radius:var(--r-xs);padding:7px 13px;font-weight:600;font-size:13px;cursor:pointer;color:var(--muted)}
+
+.ac-wrap{position:relative}
+.ac-wrap>input{width:100%}
+.ac-list{position:absolute;left:0;right:0;top:100%;z-index:10;background:var(--surface);border:1px solid var(--brand);border-top:0;border-radius:0 0 var(--r-sm) var(--r-sm);box-shadow:var(--sh-2);max-height:210px;overflow:auto}
+.ac-list.hidden{display:none}
+.ac-item{padding:8px 11px;cursor:pointer}
+.ac-item:hover{background:var(--surface-2)}
+.ac-item .ac-soc{font-weight:600;font-size:13px}
+.ac-item .ac-sub{color:var(--muted);font-size:11.5px}
+
 @media (max-width:720px){
   .modal-body{grid-template-columns:1fr}
   .lane{flex-direction:column}
@@ -644,6 +688,31 @@ a{color:inherit}
     </div>
     <div class="tools-pane on" data-pane="links">
       <div class="links-list" id="links-list"></div>
+    </div>
+  </div>
+</aside>
+
+<!-- ============ CARNET D'ADRESSES (droite) ============ -->
+<button class="carnet-handle" id="carnet-handle" title="Carnet d'adresses">📇 Carnet</button>
+<aside class="carnet-drawer" id="carnet-drawer">
+  <div class="tools-head">
+    <h2>Carnet d'adresses</h2>
+    <button class="close" id="carnet-close" aria-label="Fermer">×</button>
+  </div>
+  <div class="tools-tabs">
+    <button class="ctab on" data-ctab="clients">Clients</button>
+    <button class="ctab" data-ctab="sous">Sous-traitants</button>
+  </div>
+  <div class="tools-body">
+    <div class="carnet-pane on" data-cpane="clients">
+      <button class="add-contact" data-type="clients">＋ Ajouter un client</button>
+      <div class="contact-form" id="cf-clients" hidden></div>
+      <div class="contact-list" id="list-clients"></div>
+    </div>
+    <div class="carnet-pane" data-cpane="sous">
+      <button class="add-contact" data-type="sous_traitants">＋ Ajouter un sous-traitant</button>
+      <div class="contact-form" id="cf-sous" hidden></div>
+      <div class="contact-list" id="list-sous"></div>
     </div>
   </div>
 </aside>
@@ -758,7 +827,10 @@ a{color:inherit}
 
       <div class="field">
         <label for="f-ent">Client — entreprise</label>
-        <input id="f-ent" type="text" placeholder="Ex. Mairie de Gap">
+        <div class="ac-wrap">
+          <input id="f-ent" type="text" placeholder="Ex. Mairie de Gap" autocomplete="off">
+          <div class="ac-list hidden" id="ac-list"></div>
+        </div>
       </div>
       <div class="field">
         <label for="f-contact">Contact</label>
@@ -886,6 +958,16 @@ let tools = (function(){
   return {notes:'',links:[]};
 })();
 function saveTools(){ if(Store._check()){ try{ localStorage.setItem(TOOLS_KEY, JSON.stringify(tools)); }catch(e){} } }
+
+/* Carnet d'adresses (stockage séparé) */
+const CONTACTS_KEY='suivi_contacts_v1';
+let contacts = (function(){
+  let c; if(Store._check()){ try{ c=JSON.parse(localStorage.getItem(CONTACTS_KEY)); }catch(e){} }
+  c = c || {clients:[],sous_traitants:[]};
+  c.clients = c.clients||[]; c.sous_traitants = c.sous_traitants||[];
+  return c;
+})();
+function saveContacts(){ if(Store._check()){ try{ localStorage.setItem(CONTACTS_KEY, JSON.stringify(contacts)); }catch(e){} } }
 
 /* ---------- Petit helper de création de noeuds (sûr : texte via textContent) ---------- */
 function el(tag, props, ...kids){
@@ -1380,6 +1462,8 @@ function saveModal(){
   }else{
     affaires.push({id:uid(), ...data, events:[]}); persist(); toast('Affaire créée');
   }
+  upsertClientFromAffaire(data.client);
+  renderContacts();
   closeModal(); renderAll();
   if(currentView==='map') renderOverview();
   if(currentView==='agenda') renderAgenda();
@@ -1799,6 +1883,96 @@ function initTools(){
   renderLinks();
 }
 
+/* ---------- Carnet d'adresses ---------- */
+function upsertClientFromAffaire(cl){
+  if(!cl) return;
+  const societe=(cl.entreprise||'').trim(), nom=(cl.contact||'').trim(), tel=(cl.tel||'').trim(), mail=(cl.mail||'').trim();
+  if(!societe && !nom && !tel && !mail) return;
+  const n=s=>(s||'').toLowerCase().trim();
+  let ex = contacts.clients.find(c => (mail && n(c.mail)===n(mail)) || (!mail && n(c.societe)===n(societe) && n(c.nom)===n(nom)));
+  if(ex){ ex.societe=societe||ex.societe; ex.nom=nom||ex.nom; ex.tel=tel||ex.tel; ex.mail=mail||ex.mail; }
+  else contacts.clients.push({id:uid(), nom, societe, secteur:'', tel, mail});
+  saveContacts();
+}
+
+function contactCard(c, type){
+  return el('div',{class:'contact-card'},
+    el('div',{class:'cc-actions'},
+      el('button',{class:'edit',title:'Modifier',onclick:()=>openContactForm(type,c)},'✎'),
+      el('button',{class:'del',title:'Supprimer',onclick:()=>{ if(confirm('Supprimer ce contact ?')){ contacts[type]=contacts[type].filter(x=>x.id!==c.id); saveContacts(); renderContacts(); } }},'🗑')),
+    el('h3',{}, c.nom || c.societe || '—'),
+    c.societe && c.nom ? el('div',{class:'soc'}, c.societe) : null,
+    (type==='clients' && c.secteur) ? el('div',{class:'sect'}, c.secteur) : null,
+    c.tel ? el('div',{class:'cc-row'}, '📞', el('a',{href:`tel:${(c.tel||'').replace(/\s/g,'')}`}, c.tel)) : null,
+    c.mail ? el('div',{class:'cc-row'}, '✉️', el('a',{href:`mailto:${c.mail}`}, c.mail)) : null
+  );
+}
+function renderContacts(){
+  const lc=document.getElementById('list-clients'); if(lc){ lc.innerHTML=''; contacts.clients.forEach(c=>lc.append(contactCard(c,'clients'))); }
+  const ls=document.getElementById('list-sous'); if(ls){ ls.innerHTML=''; contacts.sous_traitants.forEach(c=>ls.append(contactCard(c,'sous_traitants'))); }
+}
+function openContactForm(type, c){
+  const slot = document.getElementById(type==='clients'?'cf-clients':'cf-sous');
+  const isClient = type==='clients';
+  const v=k=>c?(c[k]||''):'';
+  const nom  = el('input',{type:'text', placeholder:'Nom prénom',        value:v('nom')});
+  const soc  = el('input',{type:'text', placeholder:'Société',            value:v('societe')});
+  const sect = isClient ? el('input',{type:'text', placeholder:"Secteur d'activité", value:v('secteur')}) : null;
+  const tel  = el('input',{type:'tel',  placeholder:'N° de téléphone',     value:v('tel')});
+  const mail = el('input',{type:'email',placeholder:'Adresse mail',        value:v('mail')});
+  const save = el('button',{class:'cf-save',onclick:()=>{
+    const obj={ nom:nom.value.trim(), societe:soc.value.trim(), secteur:sect?sect.value.trim():'', tel:tel.value.trim(), mail:mail.value.trim() };
+    if(!obj.nom && !obj.societe){ toast('Nom ou société requis'); return; }
+    if(c) Object.assign(c,obj); else contacts[type].push({id:uid(), ...obj});
+    saveContacts(); slot.hidden=true; slot.innerHTML=''; renderContacts();
+  }},'Enregistrer');
+  const cancel = el('button',{class:'cf-cancel',onclick:()=>{ slot.hidden=true; slot.innerHTML=''; }},'Annuler');
+  slot.innerHTML='';
+  slot.append(nom, soc, ...(sect?[sect]:[]), tel, mail, el('div',{class:'cf-actions'}, cancel, save));
+  slot.hidden=false; nom.focus();
+}
+
+function initCarnet(){
+  const drawer=document.getElementById('carnet-drawer');
+  const handle=document.getElementById('carnet-handle');
+  const setOpen=o=>{ drawer.classList.toggle('open',o); handle.classList.toggle('open',o); };
+  handle.onclick=()=>setOpen(!drawer.classList.contains('open'));
+  document.getElementById('carnet-close').onclick=()=>setOpen(false);
+  document.querySelectorAll('.ctab').forEach(t=>t.onclick=()=>{
+    const name=t.dataset.ctab;
+    document.querySelectorAll('.ctab').forEach(x=>x.classList.toggle('on',x===t));
+    document.querySelectorAll('.carnet-pane').forEach(p=>p.classList.toggle('on',p.dataset.cpane===name));
+  });
+  document.querySelectorAll('.add-contact').forEach(b=>b.onclick=()=>openContactForm(b.dataset.type));
+  renderContacts();
+}
+
+/* autocomplétion du champ entreprise (anti-doublon) */
+function setupClientAutocomplete(){
+  const inp=document.getElementById('f-ent'), box=document.getElementById('ac-list');
+  const all=()=>[...contacts.clients, ...contacts.sous_traitants];
+  const render=q=>{
+    const t=(q||'').toLowerCase().trim(); box.innerHTML='';
+    if(!t){ box.classList.add('hidden'); return; }
+    const matches=all().filter(c=>(c.societe||'').toLowerCase().includes(t)||(c.nom||'').toLowerCase().includes(t)).slice(0,8);
+    if(matches.length===0){ box.classList.add('hidden'); return; }
+    matches.forEach(c=>box.append(el('div',{class:'ac-item',onmousedown:e=>{
+      e.preventDefault();
+      document.getElementById('f-ent').value=c.societe||'';
+      document.getElementById('f-contact').value=c.nom||'';
+      document.getElementById('f-tel').value=c.tel||'';
+      document.getElementById('f-mail').value=c.mail||'';
+      box.classList.add('hidden');
+    }},
+      el('div',{class:'ac-soc'}, c.societe||c.nom||'—'),
+      el('div',{class:'ac-sub'}, [c.nom, c.tel, c.mail].filter(Boolean).join(' · ')))));
+    box.classList.remove('hidden');
+  };
+  inp.addEventListener('input',()=>render(inp.value));
+  inp.addEventListener('focus',()=>render(inp.value));
+  inp.addEventListener('blur',()=>setTimeout(()=>box.classList.add('hidden'),150));
+}
+
 /* ---------- Démarrage ---------- */
 function hideSplash(){
   const s=document.getElementById('splash');
@@ -1810,6 +1984,8 @@ function hideSplash(){
 renderAll();
 updateAoChip();
 initTools();
+initCarnet();
+setupClientAutocomplete();
 setView('map');   // on arrive directement sur la carte
 
 if(overviewMap) overviewMap.whenReady(()=>setTimeout(hideSplash,450));
