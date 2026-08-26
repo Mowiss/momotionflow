@@ -611,6 +611,9 @@ a{color:inherit}
 .ctab.on{background:var(--brand);color:#fff;border-color:var(--brand)}
 .carnet-pane{display:none}
 .carnet-pane.on{display:block}
+.carnet-search{padding:10px 12px 0}
+.carnet-search input{width:100%;border:1px solid var(--line-strong);border-radius:var(--r-sm);padding:8px 11px;font-size:13px;background:var(--surface-2);font-family:inherit}
+.carnet-search input:focus{outline:none;border-color:var(--brand);background:var(--surface)}
 .add-contact{width:100%;background:transparent;border:1px dashed var(--line-strong);color:var(--muted);border-radius:var(--r-sm);padding:9px;font-weight:600;font-size:13px;cursor:pointer;margin-bottom:10px}
 .add-contact:hover{border-color:var(--brand);color:var(--brand)}
 .contact-list{display:flex;flex-direction:column;gap:9px}
@@ -703,6 +706,7 @@ a{color:inherit}
     <button class="ctab on" data-ctab="clients">Clients</button>
     <button class="ctab" data-ctab="sous">Sous-traitants</button>
   </div>
+  <div class="carnet-search"><input type="search" id="carnet-search" placeholder="Rechercher un contact…" autocomplete="off"></div>
   <div class="tools-body">
     <div class="carnet-pane on" data-cpane="clients">
       <button class="add-contact" data-type="clients">＋ Ajouter un client</button>
@@ -968,6 +972,7 @@ let contacts = (function(){
   return c;
 })();
 function saveContacts(){ if(Store._check()){ try{ localStorage.setItem(CONTACTS_KEY, JSON.stringify(contacts)); }catch(e){} } }
+let contactSearch='';
 
 /* ---------- Petit helper de création de noeuds (sûr : texte via textContent) ---------- */
 function el(tag, props, ...kids){
@@ -1908,8 +1913,13 @@ function contactCard(c, type){
   );
 }
 function renderContacts(){
-  const lc=document.getElementById('list-clients'); if(lc){ lc.innerHTML=''; contacts.clients.forEach(c=>lc.append(contactCard(c,'clients'))); }
-  const ls=document.getElementById('list-sous'); if(ls){ ls.innerHTML=''; contacts.sous_traitants.forEach(c=>ls.append(contactCard(c,'sous_traitants'))); }
+  const q=contactSearch.toLowerCase().trim();
+  const match=c=>!q || [c.nom,c.societe,c.secteur,c.tel,c.mail].some(x=>(x||'').toLowerCase().includes(q));
+  const key=c=>((c.societe||c.nom||'')).toLowerCase();
+  const fill=(box,arr,type)=>{ if(!box) return; box.innerHTML='';
+    arr.filter(match).sort((a,b)=>key(a).localeCompare(key(b),'fr')).forEach(c=>box.append(contactCard(c,type))); };
+  fill(document.getElementById('list-clients'), contacts.clients, 'clients');
+  fill(document.getElementById('list-sous'), contacts.sous_traitants, 'sous_traitants');
 }
 function openContactForm(type, c){
   const slot = document.getElementById(type==='clients'?'cf-clients':'cf-sous');
@@ -1944,6 +1954,8 @@ function initCarnet(){
     document.querySelectorAll('.carnet-pane').forEach(p=>p.classList.toggle('on',p.dataset.cpane===name));
   });
   document.querySelectorAll('.add-contact').forEach(b=>b.onclick=()=>openContactForm(b.dataset.type));
+  const search=document.getElementById('carnet-search');
+  search.addEventListener('input',()=>{ contactSearch=search.value; renderContacts(); });
   renderContacts();
 }
 
