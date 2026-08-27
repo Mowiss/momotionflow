@@ -123,6 +123,14 @@ a{color:inherit}
   border-radius:var(--r-sm);width:36px;height:36px;display:grid;place-items:center;
 }
 .icon-btn:hover{background:rgba(255,255,255,.16)}
+#btn-menu{font-size:19px}
+.menu-wrap{position:relative}
+.menu-dropdown{position:absolute;right:0;top:calc(100% + 8px);background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);box-shadow:var(--sh-2);min-width:288px;z-index:50;padding:6px;display:flex;flex-direction:column;gap:2px}
+.menu-dropdown.hidden{display:none}
+.menu-item{display:flex;align-items:center;gap:11px;background:transparent;border:0;border-radius:var(--r-xs);padding:10px 12px;font-size:13px;font-weight:500;color:var(--ink);cursor:pointer;text-align:left;width:100%;font-family:inherit;white-space:nowrap}
+.menu-item:hover{background:var(--surface-2)}
+.mi-ic{width:22px;height:22px;display:grid;place-items:center;color:var(--muted);flex:0 0 auto}
+.menu-sep{height:1px;background:var(--line);margin:4px 2px}
 
 /* ============================================================
    FILTRES D'ÉTAT
@@ -593,6 +601,17 @@ a{color:inherit}
 .rt-btn.i{font-style:italic;font-family:Georgia,serif}
 .rt-btn.u{text-decoration:underline}
 .rt-print{margin-left:auto;width:auto;padding:0 10px;font-size:12.5px;font-weight:600;color:var(--brand);gap:5px}
+.bk-btn{width:100%;background:var(--brand);color:#fff;border:1px solid var(--brand);border-radius:var(--r-sm);padding:10px;font-weight:600;font-size:13px;cursor:pointer}
+.bk-btn:hover{background:var(--brand-700)}
+.bk-status{font-size:12.5px;color:var(--muted);margin:12px 0;line-height:1.55}
+.bk-status b{color:var(--ink)}
+.bk-reauth{color:#b45309;font-weight:600}
+.bk-actions{display:flex;gap:8px}
+.bk-btn2{flex:1;background:var(--surface);border:1px solid var(--line-strong);border-radius:var(--r-sm);padding:8px;font-weight:600;font-size:12.5px;cursor:pointer;color:var(--brand)}
+.bk-btn2:hover{background:var(--surface-2)}
+.bk-info{font-size:11.5px;color:var(--muted);line-height:1.55;margin-top:14px}
+.bk-note{font-size:12.5px;color:var(--muted);line-height:1.55;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r-sm);padding:12px}
+.bk-info code,.bk-note code{background:var(--surface-2);padding:1px 4px;border-radius:4px;font-size:11px}
 .rt-edit{padding:11px 12px;min-height:120px;outline:none;font-size:14px;line-height:1.55;white-space:pre-wrap;overflow:auto;word-break:break-word}
 .rt-edit:empty::before{content:attr(data-ph);color:var(--muted);pointer-events:none}
 .rt-edit ul{margin:6px 0;padding-left:22px}
@@ -677,9 +696,10 @@ a{color:inherit}
     <button class="close" id="tools-close" aria-label="Fermer">×</button>
   </div>
   <div class="tools-tabs">
-    <button class="tools-tab" data-tab="notes">Bloc-notes</button>
+    <button class="tools-tab" data-tab="notes">Notes</button>
     <button class="tools-tab" data-tab="todos">To-Do</button>
-    <button class="tools-tab on" data-tab="links">Liens utiles</button>
+    <button class="tools-tab on" data-tab="links">Liens</button>
+    <button class="tools-tab" data-tab="backup">Sauvegarde</button>
   </div>
   <div class="tools-body">
     <div class="tools-pane" data-pane="notes">
@@ -691,6 +711,20 @@ a{color:inherit}
     </div>
     <div class="tools-pane on" data-pane="links">
       <div class="links-list" id="links-list"></div>
+    </div>
+    <div class="tools-pane" data-pane="backup">
+      <div id="bk-unsupported" class="bk-note" hidden>
+        La sauvegarde automatique dans un dossier nécessite <b>Chrome ou Edge</b>, et l'appli ouverte en <b>http(s)</b> (pas en double-clic <code>file://</code>). En attendant, utilise l'export JSON (⇩) en haut.
+      </div>
+      <div id="bk-ui">
+        <button id="bk-choose" class="bk-btn">📁 Choisir le dossier de sauvegarde</button>
+        <div class="bk-status" id="bk-status"></div>
+        <div class="bk-actions">
+          <button id="bk-now" class="bk-btn2">Sauvegarder maintenant</button>
+          <button id="bk-restore" class="bk-btn2">Restaurer…</button>
+        </div>
+        <p class="bk-info">Sauvegarde automatique <b>une fois par jour à 18 h</b> dans le dossier choisi (fichier <code>momotion-AAAA-MM-JJ.json</code>). Contient les affaires, le carnet et les outils. Tout reste sur ton PC.</p>
+      </div>
     </div>
   </div>
 </aside>
@@ -745,16 +779,16 @@ a{color:inherit}
 
     <div class="spacer"></div>
 
-    <button class="btn btn-primary" id="btn-new">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg>
-      Nouvelle affaire
-    </button>
-    <button class="icon-btn" id="btn-export" title="Exporter (JSON)">
-      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 21h14"/></svg>
-    </button>
-    <button class="icon-btn" id="btn-import" title="Importer (JSON)">
-      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21V9m0 0 4 4m-4-4-4 4M5 3h14"/></svg>
-    </button>
+    <div class="menu-wrap">
+      <button class="icon-btn" id="btn-menu" title="Menu" aria-label="Menu">⚙</button>
+      <div class="menu-dropdown hidden" id="app-menu">
+        <button class="menu-item" data-act="new"><span class="mi-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></span>Créer une nouvelle affaire</button>
+        <div class="menu-sep"></div>
+        <button class="menu-item" data-act="save"><span class="mi-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 21h14"/></svg></span>Sauvegarde manuelle (JSON)</button>
+        <button class="menu-item" data-act="load"><span class="mi-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21V9m0 0 4 4m-4-4-4 4M5 3h14"/></svg></span>Chargement manuel</button>
+        <button class="menu-item" data-act="dir"><span class="mi-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></svg></span>Dossier de sauvegarde auto</button>
+      </div>
+    </div>
     <input type="file" id="file-import" accept="application/json" hidden>
   </div>
 </header>
@@ -1497,6 +1531,29 @@ function importJSON(file){
   reader.readAsText(file);
 }
 
+function manualBackup(){
+  const blob=new Blob([backupPayload()],{type:'application/json'});
+  const d=new Date(),p=n=>String(n).padStart(2,'0');
+  const a=el('a',{href:URL.createObjectURL(blob),download:`momotion-${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}.json`});
+  document.body.append(a); a.click(); a.remove(); toast('Sauvegarde téléchargée');
+}
+function loadBackupFile(file){
+  const reader=new FileReader();
+  reader.onload=()=>{
+    try{
+      const data=JSON.parse(reader.result);
+      const aff = Array.isArray(data) ? data : data.affaires;
+      if(!Array.isArray(aff) && !data.tools && !data.contacts) throw new Error('format');
+      if(!confirm('Charger cette sauvegarde ? Les données actuelles seront remplacées.')) return;
+      if(Array.isArray(aff)){ affaires=aff; persist(); }
+      if(data.tools){ tools=data.tools; saveTools(); }
+      if(data.contacts){ const c=data.contacts; c.clients=c.clients||[]; c.sous_traitants=c.sous_traitants||[]; contacts=c; saveContacts(); }
+      toast('Sauvegarde chargée'); setTimeout(()=>location.reload(),400);
+    }catch(e){ toast('Fichier JSON invalide.'); }
+  };
+  reader.readAsText(file);
+}
+
 /* ---------- toast ---------- */
 let toastT;
 function toast(msg){
@@ -1507,7 +1564,6 @@ function toast(msg){
 /* ============================================================================
    ÉVÉNEMENTS GLOBAUX
    ============================================================================ */
-$('btn-new').onclick    = ()=>openModal();
 $('modal-close').onclick= closeModal;
 $('modal-cancel').onclick=closeModal;
 $('modal-save').onclick = saveModal;
@@ -1523,9 +1579,22 @@ const evBackdrop = $('ev-backdrop');
 evBackdrop.addEventListener('click',e=>{ if(e.target===evBackdrop) closeEventModal(); });
 document.addEventListener('keydown',e=>{ if(e.key==='Escape' && !evBackdrop.classList.contains('hidden')) closeEventModal(); });
 
-$('btn-export').onclick = exportJSON;
-$('btn-import').onclick = ()=>$('file-import').click();
-$('file-import').addEventListener('change',e=>{ if(e.target.files[0]) importJSON(e.target.files[0]); e.target.value=''; });
+$('file-import').addEventListener('change',e=>{ const f=e.target.files[0]; if(f) loadBackupFile(f); e.target.value=''; });
+
+/* menu ⚙ */
+const appMenu=$('app-menu');
+$('btn-menu').onclick=e=>{ e.stopPropagation(); appMenu.classList.toggle('hidden'); };
+appMenu.addEventListener('click',e=>{
+  const it=e.target.closest('.menu-item'); if(!it) return;
+  appMenu.classList.add('hidden');
+  const act=it.dataset.act;
+  if(act==='new') openModal();
+  else if(act==='save') manualBackup();
+  else if(act==='load') $('file-import').click();
+  else if(act==='dir'){ if(FS_OK) chooseBackupDir(); else toast('Nécessite Chrome/Edge en http(s)'); }
+});
+document.addEventListener('click',()=>appMenu.classList.add('hidden'));
+document.addEventListener('keydown',e=>{ if(e.key==='Escape') appMenu.classList.add('hidden'); });
 
 $('search').addEventListener('input',e=>{ searchTerm=e.target.value.trim().toLowerCase(); renderAll(); if(currentView==='map') renderOverview(); });
 
@@ -1985,6 +2054,98 @@ function setupClientAutocomplete(){
   inp.addEventListener('blur',()=>setTimeout(()=>box.classList.add('hidden'),150));
 }
 
+/* ---------- Sauvegarde locale automatique (File System Access API) ---------- */
+let backupDir=null, needReauth=false;
+const FS_OK = typeof window!=='undefined' && 'showDirectoryPicker' in window;
+
+function idbReq(mode, fn){
+  return new Promise((res,rej)=>{
+    const r=indexedDB.open('momotion',1);
+    r.onupgradeneeded=()=>{ if(!r.result.objectStoreNames.contains('kv')) r.result.createObjectStore('kv'); };
+    r.onsuccess=()=>{ const db=r.result; const tx=db.transaction('kv',mode); const st=tx.objectStore('kv'); const q=fn(st);
+      tx.oncomplete=()=>{ db.close(); res(q&&q.result); }; tx.onerror=()=>{ db.close(); rej(tx.error); }; };
+    r.onerror=()=>rej(r.error);
+  });
+}
+const idbSet=(k,v)=>idbReq('readwrite',st=>st.put(v,k));
+const idbGet=(k)=>idbReq('readonly',st=>st.get(k));
+
+function backupPayload(){
+  return JSON.stringify({app:'MOMOtion Flow', version:1, exportedAt:new Date().toISOString(), affaires, tools, contacts}, null, 2);
+}
+async function dirPerm(request){
+  if(!backupDir) return false;
+  const opts={mode:'readwrite'};
+  let p=await backupDir.queryPermission(opts);
+  if(p==='granted') return true;
+  if(request){ p=await backupDir.requestPermission(opts); return p==='granted'; }
+  return false;
+}
+async function doBackup(manual){
+  if(!backupDir){ if(manual) toast('Choisis d’abord un dossier'); return; }
+  const ok=await dirPerm(!!manual);
+  if(!ok){ needReauth=true; updateBackupUI(); if(manual) toast('Autorisation refusée'); return; }
+  needReauth=false;
+  try{
+    const name=`momotion-${new Date().toISOString().slice(0,10)}.json`;
+    const fh=await backupDir.getFileHandle(name,{create:true});
+    const w=await fh.createWritable(); await w.write(new Blob([backupPayload()],{type:'application/json'})); await w.close();
+    localStorage.setItem('momotion_last_backup', new Date().toISOString());
+    updateBackupUI(); if(manual) toast('Sauvegarde effectuée');
+  }catch(e){ if(manual) toast('Échec de la sauvegarde'); }
+}
+async function chooseBackupDir(){
+  try{
+    backupDir=await window.showDirectoryPicker({mode:'readwrite'});
+    try{ await idbSet('backupDir', backupDir); }catch(e){}
+    needReauth=false; updateBackupUI(); doBackup(true);
+  }catch(e){/* annulé */}
+}
+async function restoreBackup(){
+  try{
+    const [fh]=await window.showOpenFilePicker({types:[{description:'Sauvegarde JSON',accept:{'application/json':['.json']}}]});
+    const data=JSON.parse(await (await fh.getFile()).text());
+    if(!confirm('Restaurer cette sauvegarde ? Les données actuelles seront remplacées.')) return;
+    if(Array.isArray(data.affaires)){ affaires=data.affaires; persist(); }
+    if(data.tools){ tools=data.tools; saveTools(); }
+    if(data.contacts){ const c=data.contacts; c.clients=c.clients||[]; c.sous_traitants=c.sous_traitants||[]; contacts=c; saveContacts(); }
+    toast('Sauvegarde restaurée'); setTimeout(()=>location.reload(),400);
+  }catch(e){/* annulé */}
+}
+function lastBackupInfo(){ return localStorage.getItem('momotion_last_backup'); }
+function checkDailyBackup(){
+  if(!backupDir) return;
+  const now=new Date(), today=now.toISOString().slice(0,10);
+  const last=lastBackupInfo();
+  if(now.getHours()>=18 && (!last || last.slice(0,10)!==today)) doBackup(false);
+}
+function updateBackupUI(){
+  const st=document.getElementById('bk-status'); if(!st) return;
+  st.innerHTML='';
+  if(!backupDir){ st.textContent='Aucun dossier défini.'; return; }
+  const last=lastBackupInfo();
+  const lastTxt = last ? new Date(last).toLocaleString('fr-FR',{dateStyle:'short',timeStyle:'short'}) : 'jamais';
+  st.innerHTML = `Dossier : <b>${escapeHtml(backupDir.name||'sélectionné')}</b><br>Dernière sauvegarde : <b>${lastTxt}</b>`
+    + (needReauth ? `<br><span class="bk-reauth">⚠ Ré-autorisation requise — clique « Sauvegarder maintenant ».</span>` : '');
+}
+function initBackup(){
+  const pane=document.querySelector('.tools-pane[data-pane="backup"]');
+  if(!FS_OK){
+    document.getElementById('bk-unsupported').hidden=false;
+    document.getElementById('bk-ui').hidden=true;
+    return;
+  }
+  document.getElementById('bk-choose').onclick=chooseBackupDir;
+  document.getElementById('bk-now').onclick=()=>doBackup(true);
+  document.getElementById('bk-restore').onclick=restoreBackup;
+  (async()=>{
+    try{ const h=await idbGet('backupDir'); if(h) backupDir=h; }catch(e){}
+    updateBackupUI();
+    checkDailyBackup();
+  })();
+  setInterval(checkDailyBackup, 60000);   // vérifie chaque minute
+}
+
 /* ---------- Démarrage ---------- */
 function hideSplash(){
   const s=document.getElementById('splash');
@@ -1997,6 +2158,7 @@ renderAll();
 updateAoChip();
 initTools();
 initCarnet();
+initBackup();
 setupClientAutocomplete();
 setView('map');   // on arrive directement sur la carte
 
