@@ -429,6 +429,12 @@ a{color:inherit}
 .mapview.hidden{display:none}
 .board.hidden{display:none}
 #overview-map{height:calc(100vh - 210px);min-height:440px;border-radius:var(--r);border:1px solid var(--line);box-shadow:var(--sh-1);background:var(--surface-2);position:relative;z-index:0}
+.map-tools{display:flex;flex-direction:column;gap:3px;background:var(--surface);border:1px solid rgba(0,0,0,.18);border-radius:8px;box-shadow:0 1px 5px rgba(0,0,0,.3);padding:3px}
+.map-tools button{width:34px;height:34px;border:0;background:transparent;border-radius:6px;cursor:pointer;display:grid;place-items:center;color:var(--ink)}
+.map-tools button:hover{background:var(--surface-2)}
+.map-tools button.on{background:var(--brand);color:#fff}
+.measure-label{background:rgba(255,255,255,.94);border:1px solid var(--line-strong);border-radius:5px;padding:1px 6px;font:600 12px/1.45 "IBM Plex Mono",monospace;color:var(--ink);white-space:nowrap;box-shadow:var(--sh-1)}
+.measure-label::before{display:none}
 #overview-map.hidden{display:none}
 .map-note{position:absolute;top:26px;left:50%;transform:translateX(-50%);z-index:800;background:rgba(21,32,43,.92);color:#fff;padding:8px 15px;border-radius:999px;font-size:12.5px;font-weight:600;box-shadow:var(--sh-2);pointer-events:none;max-width:80%;text-align:center}
 .map-note.hidden{display:none}
@@ -1032,6 +1038,11 @@ let contacts = (function(){
 })();
 function saveContacts(){ dirty=true; if(Store._check()){ try{ localStorage.setItem(CONTACTS_KEY, JSON.stringify(contacts)); }catch(e){} } }
 let contactSearch='';
+
+/* Tracés & mesures sur la carte (stockage séparé) */
+const DRAW_KEY='suivi_drawings_v1';
+let drawings=(function(){ if(Store._check()){ try{ return JSON.parse(localStorage.getItem(DRAW_KEY))||[]; }catch(e){} } return []; })();
+function saveDrawings(){ dirty=true; if(Store._check()){ try{ localStorage.setItem(DRAW_KEY, JSON.stringify(drawings)); }catch(e){} } }
 
 /* ---------- Petit helper de création de noeuds (sûr : texte via textContent) ---------- */
 function el(tag, props, ...kids){
@@ -1653,6 +1664,101 @@ document.getElementById('filters').addEventListener('click',e=>{
    ============================================================================ */
 let currentView='board';
 let overviewMap=null, overviewLayer=null;
+let drawLayer=null, drawTool=null, drawTemp=null, freeDrawing=false, drawToolbarEl=null;
+const drawIdLayers={};
+
+/* ---------- Outils de dessin & mesure sur la carte ---------- */
+function llLen(lls){ let d=0; for(let i=1;i<lls.length;i++) d+=overviewMap.distance(lls[i-1],lls[i]); return d; }
+function fmtDist(m){ return m<1000 ? (Math.round(m*10)/10)+' m' : (m/1000).toFixed(3)+' km'; }
+function polyArea(lls){
+  const R=6378137, n=lls.length; if(n<3) return 0; let s=0;
+  for(let i=0;i<n;i++){ const p1=lls[i], p2=lls[(i+1)%n];
+    s += (p2.lng-p1.lng)*Math.PI/180 * (2 + Math.sin(p1.lat*Math.PI/180) + Math.sin(p2.lat*Math.PI/180)); }
+  return Math.abs(s*R*R/2);
+}
+function fmtArea(a){ return Math.round(a).toLocaleString('fr-FR')+' m²'; }
+function dedupeLL(lls){ const o=[]; for(const p of lls){ const l=o[o.length-1]; if(!l||l.lat!==p.lat||l.lng!==p.lng) o.push(p); } return o; }
+
+function buildDrawFeature(f){
+  const lls=f.pts.map(p=>L.latLng(p[0],p[1]));
+  let layer;
+  if(f.type==='draw') layer=L.polyline(lls,{color:'#DC2626',weight:3,opacity:.9});
+  else if(f.type==='ruler'||f.type==='poly') layer=L.polyline(lls,{color:'#1D4ED8',weight:3});
+  else layer=L.polygon(lls,{color:'#16A34A',weight:2,fillColor:'#16A34A',fillOpacity:.15});
+  if(f.type==='ruler'||f.type==='poly') layer.bindTooltip(fmtDist(llLen(lls)),{permanent:true,direction:'center',className:'measure-label'});
+  else if(f.type==='area') layer.bindTooltip(fmtArea(polyArea(lls)),{permanent:true,direction:'center',className:'measure-label'});
+  layer.on('click',ev=>{ if(drawTool==='erase'){ L.DomEvent.stop(ev); removeDrawing(f.id); } });
+  drawLayer.addLayer(layer); drawIdLayers[f.id]=layer;
+}
+function addDrawing(type,lls){ const f={id:uid(),type,pts:lls.map(l=>[l.lat,l.lng])}; drawings.push(f); saveDrawings(); buildDrawFeature(f); }
+function removeDrawing(id){ const l=drawIdLayers[id]; if(l&&drawLayer) drawLayer.removeLayer(l); delete drawIdLayers[id]; drawings=drawings.filter(f=>f.id!==id); saveDrawings(); }
+function clearDrawings(){ drawings=[]; saveDrawings(); if(drawLayer) drawLayer.clearLayers(); for(const k in drawIdLayers) delete drawIdLayers[k]; }
+
+function cancelDrawTemp(){ if(drawTemp){ if(drawTemp.line) overviewMap.removeLayer(drawTemp.line); if(drawTemp.poly) overviewMap.removeLayer(drawTemp.poly); drawTemp=null; } freeDrawing=false; }
+function setDrawTool(t){
+  drawTool=(drawTool===t)?null:t; cancelDrawTemp();
+  if(drawToolbarEl) drawToolbarEl.querySelectorAll('button').forEach(b=>b.classList.toggle('on', b.dataset.tool===drawTool));
+  if(!overviewMap) return;
+  const c=overviewMap.getContainer();
+  if(drawTool){ overviewMap.doubleClickZoom.disable(); c.style.cursor='crosshair'; } else { overviewMap.doubleClickZoom.enable(); c.style.cursor=''; }
+  if(drawTool==='draw') overviewMap.dragging.disable(); else overviewMap.dragging.enable();
+}
+function onDrawMouseDown(e){ if(drawTool!=='draw') return; freeDrawing=true; drawTemp={latlngs:[e.latlng], line:L.polyline([e.latlng],{color:'#DC2626',weight:3}).addTo(overviewMap)}; }
+function onDrawMouseMove(e){
+  if(freeDrawing && drawTemp){ drawTemp.latlngs.push(e.latlng); drawTemp.line.setLatLngs(drawTemp.latlngs); return; }
+  if(!drawTemp) return;
+  if(drawTool==='ruler'||drawTool==='poly') drawTemp.line.setLatLngs(drawTemp.latlngs.concat([e.latlng]));
+  else if(drawTool==='area') drawTemp.poly.setLatLngs(drawTemp.latlngs.concat([e.latlng]));
+}
+function onDrawMouseUp(){
+  if(!freeDrawing) return; freeDrawing=false;
+  const pts=drawTemp?drawTemp.latlngs:[];
+  if(drawTemp){ overviewMap.removeLayer(drawTemp.line); drawTemp=null; }
+  if(pts.length>1) addDrawing('draw', pts);
+}
+function onDrawClick(e){
+  if(!drawTool || drawTool==='draw' || drawTool==='erase') return;
+  if(drawTool==='ruler'){
+    if(!drawTemp) drawTemp={latlngs:[e.latlng], line:L.polyline([e.latlng],{color:'#1D4ED8',weight:3,dashArray:'6 5'}).addTo(overviewMap)};
+    else { drawTemp.latlngs.push(e.latlng); const pts=drawTemp.latlngs.slice(0,2); overviewMap.removeLayer(drawTemp.line); drawTemp=null; addDrawing('ruler', pts); }
+  } else if(drawTool==='poly'){
+    if(!drawTemp) drawTemp={latlngs:[e.latlng], line:L.polyline([e.latlng],{color:'#1D4ED8',weight:3}).addTo(overviewMap)};
+    else { drawTemp.latlngs.push(e.latlng); drawTemp.line.setLatLngs(drawTemp.latlngs); }
+  } else if(drawTool==='area'){
+    if(!drawTemp) drawTemp={latlngs:[e.latlng], poly:L.polygon([e.latlng],{color:'#16A34A',weight:2,fillOpacity:.15}).addTo(overviewMap)};
+    else { drawTemp.latlngs.push(e.latlng); drawTemp.poly.setLatLngs(drawTemp.latlngs); }
+  }
+}
+function onDrawDblClick(e){
+  if(drawTool==='poly' && drawTemp){ const pts=dedupeLL(drawTemp.latlngs); overviewMap.removeLayer(drawTemp.line); drawTemp=null; if(pts.length>=2) addDrawing('poly', pts); }
+  else if(drawTool==='area' && drawTemp){ const pts=dedupeLL(drawTemp.latlngs); overviewMap.removeLayer(drawTemp.poly); drawTemp=null; if(pts.length>=3) addDrawing('area', pts); }
+  else if(drawTool==='erase'){ if(drawings.length && confirm('Effacer tous les tracés ?')) clearDrawings(); }
+}
+const DRAW_TOOLS=[
+  {t:'draw', title:'Dessiner à main levée', svg:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>'},
+  {t:'ruler',title:'Cote linéaire (2 points)', svg:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20 20 4"/><path d="m6 14 2 2"/><path d="m10 10 2 2"/><path d="m14 6 2 2"/></svg>'},
+  {t:'poly', title:'Ligne brisée — double-clic pour finir', svg:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18l5-8 4 5 4-9 5 8"/></svg>'},
+  {t:'area', title:'Aire — double-clic pour finir', svg:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5l14 3-4 11-8-2Z"/></svg>'},
+  {t:'erase',title:'Gomme — clic sur un tracé ; double-clic sur la carte = tout effacer', svg:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 21-4-4a2 2 0 0 1 0-2.83l8-8a2 2 0 0 1 2.83 0l4 4a2 2 0 0 1 0 2.83L14 21Z"/><path d="M22 21H8"/></svg>'}
+];
+function initDrawTools(map, ctrl){
+  drawLayer=L.featureGroup().addTo(map);
+  if(ctrl) ctrl.addOverlay(drawLayer,'Annotations');
+  drawings.forEach(buildDrawFeature);
+  const Ctrl=L.Control.extend({options:{position:'topright'}, onAdd:function(){
+    const div=L.DomUtil.create('div','map-tools');
+    div.innerHTML=DRAW_TOOLS.map(b=>`<button data-tool="${b.t}" title="${b.title}">${b.svg}</button>`).join('');
+    L.DomEvent.disableClickPropagation(div); L.DomEvent.disableScrollPropagation(div);
+    div.querySelectorAll('button').forEach(btn=>btn.onclick=()=>setDrawTool(btn.dataset.tool));
+    drawToolbarEl=div; return div;
+  }});
+  map.addControl(new Ctrl());
+  map.on('mousedown', onDrawMouseDown);
+  map.on('mousemove', onDrawMouseMove);
+  map.on('mouseup', onDrawMouseUp);
+  map.on('click', onDrawClick);
+  map.on('dblclick', onDrawDblClick);
+}
 
 function setView(v){
   currentView=v;
@@ -1697,7 +1803,7 @@ function renderOverview(){
     const admin    = wms('https://data.geopf.fr/wms-r/wms','ADMINEXPRESS-COG-CARTO.LATEST','IGN');
     const geol     = wms('https://geoservices.brgm.fr/geologie','GEOLOGIE','BRGM');
 
-    L.control.layers(
+    const layerCtrl = L.control.layers(
       {'Plan':plan,'Satellite':sat,'Topographique':topo,'Ortho IGN':ortho,'Plan IGN':planIgn},
       {
         'Cadastre (IGN)':cadastre,
@@ -1709,6 +1815,7 @@ function renderOverview(){
     ).addTo(overviewMap);
     overviewLayer=L.layerGroup().addTo(overviewMap);
     overviewMap.on('popupopen', onPopupOpen);
+    initDrawTools(overviewMap, layerCtrl);
   }
   overviewLayer.clearLayers();
 
