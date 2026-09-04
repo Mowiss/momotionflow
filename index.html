@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MOMOtion Flow — Suivi d'affaires</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏗️</text></svg>">
+<meta name="theme-color" content="#0E2A47">
+<link rel="manifest" id="app-manifest">
 
 <!-- Leaflet (OpenStreetMap) via CDN -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
@@ -129,14 +131,22 @@ a{color:inherit}
 .menu-dropdown.hidden{display:none}
 .menu-item{display:flex;align-items:center;gap:11px;background:transparent;border:0;border-radius:var(--r-xs);padding:10px 12px;font-size:13px;font-weight:500;color:var(--ink);cursor:pointer;text-align:left;width:100%;font-family:inherit;white-space:nowrap}
 .menu-item:hover{background:var(--surface-2)}
+.menu-item[hidden]{display:none}
+.menu-sep[hidden]{display:none}
 .mi-ic{width:22px;height:22px;display:grid;place-items:center;color:var(--muted);flex:0 0 auto}
 .menu-sep{height:1px;background:var(--line);margin:4px 2px}
 
 /* ============================================================
    FILTRES D'ÉTAT
    ============================================================ */
+.subhead{
+  position:sticky;top:0;z-index:39;
+  background:var(--surface);
+  border-bottom:1px solid var(--line);
+  box-shadow:var(--sh-1);
+}
 .filters{
-  max-width:1500px;margin:0 auto;padding:12px 18px 2px;
+  max-width:1500px;margin:0 auto;padding:11px 18px;
   display:flex;align-items:center;gap:9px;flex-wrap:wrap;
 }
 .filters .lbl{font-family:"IBM Plex Mono";font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-right:2px}
@@ -617,6 +627,22 @@ a{color:inherit}
 .rt-edit ul{margin:6px 0;padding-left:22px}
 .rt-edit.rt-notes{min-height:calc(100vh - 262px)}
 .rt-edit.rt-doc{min-height:320px}
+.calc{display:flex;flex-direction:column;gap:10px}
+.pane-toolbar{display:flex;justify-content:flex-end;margin-bottom:8px}
+.pane-print{background:var(--surface);border:1px solid var(--line-strong);border-radius:var(--r-xs);padding:6px 11px;font-size:12.5px;font-weight:600;color:var(--brand);cursor:pointer}
+.pane-print:hover{background:var(--surface-2)}
+.calc-screen{background:var(--surface-2);border:1px solid var(--line-strong);border-radius:var(--r-sm);padding:10px 12px;min-height:62px;display:flex;flex-direction:column;justify-content:center;gap:2px;text-align:right}
+.calc-expr{font-family:"IBM Plex Mono",monospace;font-size:13px;color:var(--muted);min-height:16px;word-break:break-all}
+.calc-res{font-family:"IBM Plex Mono",monospace;font-size:22px;font-weight:600;color:var(--ink);word-break:break-all}
+.calc-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.calc-btn{padding:12px 0;border:1px solid var(--line-strong);border-radius:var(--r-xs);background:var(--surface);font-size:14px;font-weight:600;color:var(--ink);cursor:pointer;font-family:inherit}
+.calc-btn:hover{background:var(--surface-2)}
+.calc-btn.fn{color:var(--brand);font-size:12.5px}
+.calc-btn.op{color:var(--brand)}
+.calc-btn.util{color:var(--danger)}
+.calc-btn.eq{background:var(--brand);color:#fff;border-color:var(--brand)}
+.calc-btn.eq:hover{background:var(--brand-700)}
+.calc-btn.span2{grid-column:span 2}
 
 /* ============================================================
    CARNET D'ADRESSES (tiroir droit) + autocomplétion
@@ -698,33 +724,26 @@ a{color:inherit}
   <div class="tools-tabs">
     <button class="tools-tab" data-tab="notes">Notes</button>
     <button class="tools-tab" data-tab="todos">To-Do</button>
+    <button class="tools-tab" data-tab="calc">Calc</button>
     <button class="tools-tab on" data-tab="links">Liens</button>
-    <button class="tools-tab" data-tab="backup">Sauvegarde</button>
   </div>
   <div class="tools-body">
     <div class="tools-pane" data-pane="notes">
       <div id="notes-mount"></div>
     </div>
     <div class="tools-pane" data-pane="todos">
+      <div class="pane-toolbar"><button class="pane-print" id="todos-print" title="Imprimer la liste">🖨 Imprimer</button></div>
       <ul class="notes" id="todos-list"></ul>
       <div class="note-add"><input id="todo-input" type="text" placeholder="Nouvelle tâche…"><button id="todo-add" title="Ajouter">+</button></div>
     </div>
+    <div class="tools-pane" data-pane="calc">
+      <div class="calc">
+        <div class="calc-screen"><div class="calc-expr" id="calc-expr"></div><div class="calc-res" id="calc-res">0</div></div>
+        <div class="calc-grid" id="calc-grid"></div>
+      </div>
+    </div>
     <div class="tools-pane on" data-pane="links">
       <div class="links-list" id="links-list"></div>
-    </div>
-    <div class="tools-pane" data-pane="backup">
-      <div id="bk-unsupported" class="bk-note" hidden>
-        La sauvegarde automatique dans un dossier nécessite <b>Chrome ou Edge</b>, et l'appli ouverte en <b>http(s)</b> (pas en double-clic <code>file://</code>). En attendant, utilise l'export JSON (⇩) en haut.
-      </div>
-      <div id="bk-ui">
-        <button id="bk-choose" class="bk-btn">📁 Choisir le dossier de sauvegarde</button>
-        <div class="bk-status" id="bk-status"></div>
-        <div class="bk-actions">
-          <button id="bk-now" class="bk-btn2">Sauvegarder maintenant</button>
-          <button id="bk-restore" class="bk-btn2">Restaurer…</button>
-        </div>
-        <p class="bk-info">Sauvegarde automatique <b>une fois par jour à 18 h</b> dans le dossier choisi (fichier <code>momotion-AAAA-MM-JJ.json</code>). Contient les affaires, le carnet et les outils. Tout reste sur ton PC.</p>
-      </div>
     </div>
   </div>
 </aside>
@@ -784,9 +803,12 @@ a{color:inherit}
       <div class="menu-dropdown hidden" id="app-menu">
         <button class="menu-item" data-act="new"><span class="mi-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></span>Créer une nouvelle affaire</button>
         <div class="menu-sep"></div>
+        <button class="menu-item" data-act="savenow"><span class="mi-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg></span>Sauvegarder maintenant (dossier)</button>
         <button class="menu-item" data-act="save"><span class="mi-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 21h14"/></svg></span>Sauvegarde manuelle (JSON)</button>
         <button class="menu-item" data-act="load"><span class="mi-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21V9m0 0 4 4m-4-4-4 4M5 3h14"/></svg></span>Chargement manuel</button>
         <button class="menu-item" data-act="dir"><span class="mi-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></svg></span>Dossier de sauvegarde auto</button>
+        <div class="menu-sep" id="install-sep" hidden></div>
+        <button class="menu-item" id="menu-install" data-act="install" hidden><span class="mi-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v9m0 0 3-3m-3 3-3-3"/><rect x="4" y="13" width="16" height="7" rx="2"/></svg></span>Installer l'application</button>
       </div>
     </div>
     <input type="file" id="file-import" accept="application/json" hidden>
@@ -794,14 +816,16 @@ a{color:inherit}
 </header>
 
 <!-- ============ FILTRES ============ -->
-<div class="filters" id="filters">
-  <span class="lbl">États</span>
-  <button class="chip on" data-etat="Appel d'offre" title="Cycle : tous → non répondu → répondu → masqués"><span class="dot"></span><span class="chip-label">Appel d'offre</span><span class="ao-ind"></span></button>
-  <button class="chip on" data-etat="En étude"><span class="dot"></span>En étude</button>
-  <button class="chip on" data-etat="En travaux"><span class="dot"></span>En travaux</button>
-  <button class="chip on" data-etat="Terminé"><span class="dot"></span>Terminé</button>
-  <button class="chip on" data-etat="Sans suite"><span class="dot"></span>Sans suite</button>
-  <span class="count" id="count"></span>
+<div class="subhead" id="subhead">
+  <div class="filters" id="filters">
+    <span class="lbl">États</span>
+    <button class="chip on" data-etat="Appel d'offre" title="Cycle : tous → non répondu → répondu → masqués"><span class="dot"></span><span class="chip-label">Appel d'offre</span><span class="ao-ind"></span></button>
+    <button class="chip on" data-etat="En étude"><span class="dot"></span>En étude</button>
+    <button class="chip on" data-etat="En travaux"><span class="dot"></span>En travaux</button>
+    <button class="chip on" data-etat="Terminé"><span class="dot"></span>Terminé</button>
+    <button class="chip on" data-etat="Sans suite"><span class="dot"></span>Sans suite</button>
+    <span class="count" id="count"></span>
+  </div>
 </div>
 
 <!-- ============ PLATEAU ============ -->
@@ -987,7 +1011,8 @@ let affaires = Store.load();
 let activeEtats = new Set(ETATS);
 let aoMode = 0;   // 0 tous · 1 non répondu · 2 répondu · 3 masqués
 let searchTerm = '';
-const persist = () => Store.saveAll(affaires);
+let dirty=false;                         // modifs non encore écrites dans le dossier de sauvegarde
+const persist = () => { Store.saveAll(affaires); dirty=true; };
 
 /* Outils : bloc-notes + liens utiles (stockage séparé de localStorage) */
 const TOOLS_KEY='suivi_tools_v1';
@@ -995,7 +1020,7 @@ let tools = (function(){
   if(Store._check()){ try{ return JSON.parse(localStorage.getItem(TOOLS_KEY)) || {notes:'',links:[]}; }catch(e){} }
   return {notes:'',links:[]};
 })();
-function saveTools(){ if(Store._check()){ try{ localStorage.setItem(TOOLS_KEY, JSON.stringify(tools)); }catch(e){} } }
+function saveTools(){ dirty=true; if(Store._check()){ try{ localStorage.setItem(TOOLS_KEY, JSON.stringify(tools)); }catch(e){} } }
 
 /* Carnet d'adresses (stockage séparé) */
 const CONTACTS_KEY='suivi_contacts_v1';
@@ -1005,7 +1030,7 @@ let contacts = (function(){
   c.clients = c.clients||[]; c.sous_traitants = c.sous_traitants||[];
   return c;
 })();
-function saveContacts(){ if(Store._check()){ try{ localStorage.setItem(CONTACTS_KEY, JSON.stringify(contacts)); }catch(e){} } }
+function saveContacts(){ dirty=true; if(Store._check()){ try{ localStorage.setItem(CONTACTS_KEY, JSON.stringify(contacts)); }catch(e){} } }
 let contactSearch='';
 
 /* ---------- Petit helper de création de noeuds (sûr : texte via textContent) ---------- */
@@ -1535,7 +1560,7 @@ function manualBackup(){
   const blob=new Blob([backupPayload()],{type:'application/json'});
   const d=new Date(),p=n=>String(n).padStart(2,'0');
   const a=el('a',{href:URL.createObjectURL(blob),download:`momotion-${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}.json`});
-  document.body.append(a); a.click(); a.remove(); toast('Sauvegarde téléchargée');
+  document.body.append(a); a.click(); a.remove(); dirty=false; toast('Sauvegarde téléchargée');
 }
 function loadBackupFile(file){
   const reader=new FileReader();
@@ -1548,7 +1573,7 @@ function loadBackupFile(file){
       if(Array.isArray(aff)){ affaires=aff; persist(); }
       if(data.tools){ tools=data.tools; saveTools(); }
       if(data.contacts){ const c=data.contacts; c.clients=c.clients||[]; c.sous_traitants=c.sous_traitants||[]; contacts=c; saveContacts(); }
-      toast('Sauvegarde chargée'); setTimeout(()=>location.reload(),400);
+      dirty=false; toast('Sauvegarde chargée'); setTimeout(()=>location.reload(),400);
     }catch(e){ toast('Fichier JSON invalide.'); }
   };
   reader.readAsText(file);
@@ -1589,9 +1614,11 @@ appMenu.addEventListener('click',e=>{
   appMenu.classList.add('hidden');
   const act=it.dataset.act;
   if(act==='new') openModal();
+  else if(act==='savenow'){ if(!FS_OK) toast('Nécessite Chrome/Edge en http(s)'); else if(!backupDir) toast('Définis d’abord le dossier de sauvegarde'); else doBackup(true); }
   else if(act==='save') manualBackup();
   else if(act==='load') $('file-import').click();
   else if(act==='dir'){ if(FS_OK) chooseBackupDir(); else toast('Nécessite Chrome/Edge en http(s)'); }
+  else if(act==='install'){ if(deferredPrompt){ deferredPrompt.prompt(); deferredPrompt.userChoice.finally(()=>{ deferredPrompt=null; showInstall(false); }); } }
 });
 document.addEventListener('click',()=>appMenu.classList.add('hidden'));
 document.addEventListener('keydown',e=>{ if(e.key==='Escape') appMenu.classList.add('hidden'); });
@@ -1901,7 +1928,8 @@ const FIXED_LINKS = [
   {name:"Gantt'O'matiC©", url:'https://mowiss.github.io/Ganttomatic/',    color:'#16A34A'},
   {name:'Devizore©',      url:'https://mowiss.github.io/Devisaurus-REX/', color:'#7C3AED'},
   {name:'MOMOcad©',       url:'https://mowiss.github.io/Momocad/',        color:'#2563EB'},
-  {name:'MOMOdificator©', url:'https://mowiss.github.io/MOMOdificator/',  color:'#1C1C1C'}
+  {name:'MOMOdificator©', url:'https://mowiss.github.io/MOMOdificator/',  color:'#1C1C1C'},
+  {name:'DOEConstructor©', url:'https://mowiss.github.io/Doeconstructor/', color:'#EC4899'}
 ];
 function textOn(hex){
   const c=hex.replace('#',''); const r=parseInt(c.substr(0,2),16),g=parseInt(c.substr(2,2),16),b=parseInt(c.substr(4,2),16);
@@ -1923,6 +1951,13 @@ function renderTodos(){
     cb.addEventListener('change',()=>{ t.done=cb.checked; saveTools(); li.classList.toggle('done',t.done); });
     box.append(li);
   });
+}
+function printTodos(){
+  const rows=(tools.todos||[]).map(t=>`<li style="list-style:none;margin:5px 0">${t.done?'☑':'☐'} <span style="${t.done?'text-decoration:line-through;color:#888':''}">${escapeHtml(t.text)}</span></li>`).join('');
+  printHtml(`<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><title>To-Do</title>
+    <style>body{font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#111;margin:26px;line-height:1.6}
+      h1{font-size:20px;margin:0 0 14px} ul{padding:0;margin:0} @media print{@page{margin:16mm}}</style></head>
+    <body><h1>To-Do — MOMOtion Flow</h1><ul>${rows||'<li>(vide)</li>'}</ul></body></html>`);
 }
 function initTools(){
   const drawer=document.getElementById('tools-drawer');
@@ -1951,6 +1986,7 @@ function initTools(){
   const addTodo=()=>{ const t=tin.value.trim(); if(!t) return; tools.todos=tools.todos||[]; tools.todos.push({id:uid(),text:t,done:false}); saveTools(); renderTodos(); tin.value=''; tin.focus(); };
   document.getElementById('todo-add').onclick=addTodo;
   tin.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); addTodo(); } });
+  document.getElementById('todos-print').onclick=printTodos;
   renderTodos();
 
   // liens fixes
@@ -2091,7 +2127,7 @@ async function doBackup(manual){
     const fh=await backupDir.getFileHandle(name,{create:true});
     const w=await fh.createWritable(); await w.write(new Blob([backupPayload()],{type:'application/json'})); await w.close();
     localStorage.setItem('momotion_last_backup', new Date().toISOString());
-    updateBackupUI(); if(manual) toast('Sauvegarde effectuée');
+    dirty=false; updateBackupUI(); if(manual) toast('Sauvegarde effectuée');
   }catch(e){ if(manual) toast('Échec de la sauvegarde'); }
 }
 async function chooseBackupDir(){
@@ -2113,11 +2149,10 @@ async function restoreBackup(){
   }catch(e){/* annulé */}
 }
 function lastBackupInfo(){ return localStorage.getItem('momotion_last_backup'); }
-function checkDailyBackup(){
+function checkHourlyBackup(){                 // sauvegarde auto toutes les heures dans le dossier défini
   if(!backupDir) return;
-  const now=new Date(), today=now.toISOString().slice(0,10);
   const last=lastBackupInfo();
-  if(now.getHours()>=18 && (!last || last.slice(0,10)!==today)) doBackup(false);
+  if(!last || (Date.now()-new Date(last).getTime())>=3600000) doBackup(false);
 }
 function updateBackupUI(){
   const st=document.getElementById('bk-status'); if(!st) return;
@@ -2129,21 +2164,80 @@ function updateBackupUI(){
     + (needReauth ? `<br><span class="bk-reauth">⚠ Ré-autorisation requise — clique « Sauvegarder maintenant ».</span>` : '');
 }
 function initBackup(){
-  const pane=document.querySelector('.tools-pane[data-pane="backup"]');
-  if(!FS_OK){
-    document.getElementById('bk-unsupported').hidden=false;
-    document.getElementById('bk-ui').hidden=true;
-    return;
-  }
-  document.getElementById('bk-choose').onclick=chooseBackupDir;
-  document.getElementById('bk-now').onclick=()=>doBackup(true);
-  document.getElementById('bk-restore').onclick=restoreBackup;
   (async()=>{
     try{ const h=await idbGet('backupDir'); if(h) backupDir=h; }catch(e){}
-    updateBackupUI();
-    checkDailyBackup();
+    checkHourlyBackup();
   })();
-  setInterval(checkDailyBackup, 60000);   // vérifie chaque minute
+  setInterval(checkHourlyBackup, 60000);   // vérifie chaque minute, sauvegarde si ≥ 1 h
+  window.addEventListener('beforeunload', e=>{
+    if(dirty){ e.preventDefault(); e.returnValue=''; }
+  });
+}
+
+let deferredPrompt=null;
+function showInstall(on){
+  const it=document.getElementById('menu-install'), sep=document.getElementById('install-sep');
+  if(it) it.hidden=!on; if(sep) sep.hidden=!on;
+}
+function initPWA(){
+  try{
+    const base=location.href.split('#')[0];
+    const scope=base.replace(/[^/]*$/,'');
+    const iconSvg="<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='18' fill='#0E2A47'/><text x='50' y='55' font-size='58' text-anchor='middle' dominant-baseline='central'>🏗️</text></svg>";
+    const icon="data:image/svg+xml,"+encodeURIComponent(iconSvg);
+    const manifest={ name:'MOMOtion Flow', short_name:'MOMOtion', start_url:base, scope:scope, display:'standalone', background_color:'#0E2A47', theme_color:'#0E2A47', icons:[{src:icon,sizes:'any',type:'image/svg+xml',purpose:'any'}] };
+    const link=document.getElementById('app-manifest');
+    if(link) link.href='data:application/manifest+json;charset=utf-8,'+encodeURIComponent(JSON.stringify(manifest));
+  }catch(e){}
+  window.addEventListener('beforeinstallprompt',e=>{ e.preventDefault(); deferredPrompt=e; showInstall(true); });
+  window.addEventListener('appinstalled',()=>{ deferredPrompt=null; showInstall(false); toast('Application installée'); });
+}
+
+/* ---------- Calculatrice scientifique ---------- */
+let calcExpr='', calcDeg=true;
+function calcFormat(r){ return (Math.round(r*1e10)/1e10).toString(); }
+function calcEval(disp){
+  let s=disp.replace(/×/g,'*').replace(/÷/g,'/').replace(/−/g,'-').replace(/√/g,'sqrt').replace(/\^/g,'**')
+           .replace(/π/g,'PI').replace(/(?<![a-zA-Z])e(?![a-zA-Z])/g,'E')
+           .replace(/(\d+(?:\.\d+)?)!/g,'fact($1)')
+           .replace(/(\d+(?:\.\d+)?)%/g,'($1/100)');
+  const d = calcDeg ? Math.PI/180 : 1;
+  const scope = {
+    sin:x=>Math.sin(x*d), cos:x=>Math.cos(x*d), tan:x=>Math.tan(x*d),
+    ln:Math.log, log:Math.log10, sqrt:Math.sqrt,
+    fact:n=>{ n=Math.round(n); if(n<0||n>170) return NaN; let r=1; for(let i=2;i<=n;i++) r*=i; return r; },
+    PI:Math.PI, E:Math.E
+  };
+  const names=Object.keys(scope);
+  return new Function(...names, 'return ('+s+')')(...names.map(k=>scope[k]));
+}
+function calcRender(){
+  const e=document.getElementById('calc-expr'); if(!e) return;
+  e.textContent=calcExpr;
+  try{ const r=calcEval(calcExpr||'0'); if(isFinite(r)) document.getElementById('calc-res').textContent=calcFormat(r); }catch(_){}
+}
+const CALC_BTNS=[
+  {l:'sin',ins:'sin(',c:'fn'},{l:'cos',ins:'cos(',c:'fn'},{l:'tan',ins:'tan(',c:'fn'},{l:'DEG',act:'deg',c:'fn',id:'calc-degrad'},{l:'C',act:'clear',c:'util'},
+  {l:'ln',ins:'ln(',c:'fn'},{l:'log',ins:'log(',c:'fn'},{l:'√',ins:'√(',c:'fn'},{l:'^',ins:'^',c:'op'},{l:'⌫',act:'back',c:'util'},
+  {l:'(',ins:'('},{l:')',ins:')'},{l:'π',ins:'π',c:'op'},{l:'e',ins:'e',c:'op'},{l:'÷',ins:'÷',c:'op'},
+  {l:'7',ins:'7'},{l:'8',ins:'8'},{l:'9',ins:'9'},{l:'x²',ins:'^2',c:'op'},{l:'×',ins:'×',c:'op'},
+  {l:'4',ins:'4'},{l:'5',ins:'5'},{l:'6',ins:'6'},{l:'!',ins:'!',c:'op'},{l:'−',ins:'-',c:'op'},
+  {l:'1',ins:'1'},{l:'2',ins:'2'},{l:'3',ins:'3'},{l:'%',ins:'%',c:'op'},{l:'+',ins:'+',c:'op'},
+  {l:'0',ins:'0'},{l:'.',ins:'.'},{l:'±',act:'sign'},{l:'=',act:'equal',c:'eq span2'}
+];
+function calcClick(b){
+  if(b.act==='clear') calcExpr='';
+  else if(b.act==='back') calcExpr=calcExpr.slice(0,-1);
+  else if(b.act==='deg'){ calcDeg=!calcDeg; document.getElementById('calc-degrad').textContent=calcDeg?'DEG':'RAD'; }
+  else if(b.act==='sign') calcExpr=calcExpr.replace(/(-?\d*\.?\d+)$/, m=> m.charAt(0)==='-'?m.slice(1):'-'+m);
+  else if(b.act==='equal'){ try{ const r=calcEval(calcExpr||'0'); if(!isFinite(r)) throw 0; calcExpr=calcFormat(r); }catch(_){ document.getElementById('calc-res').textContent='Erreur'; return; } }
+  else if(b.ins!=null) calcExpr+=b.ins;
+  calcRender();
+}
+function initCalc(){
+  const grid=document.getElementById('calc-grid'); if(!grid) return;
+  CALC_BTNS.forEach(b=>{ const btn=el('button',{class:'calc-btn '+(b.c||''),onclick:()=>calcClick(b)}, b.l); if(b.id) btn.id=b.id; grid.append(btn); });
+  calcRender();
 }
 
 /* ---------- Démarrage ---------- */
@@ -2156,9 +2250,18 @@ function hideSplash(){
 
 renderAll();
 updateAoChip();
+function stickHeader(){
+  const tb=document.querySelector('.topbar'), sh=document.getElementById('subhead');
+  if(tb&&sh) sh.style.top=tb.offsetHeight+'px';
+}
+stickHeader();
+window.addEventListener('resize', stickHeader);
+
 initTools();
 initCarnet();
+initCalc();
 initBackup();
+initPWA();
 setupClientAutocomplete();
 setView('map');   // on arrive directement sur la carte
 
