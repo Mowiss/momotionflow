@@ -478,6 +478,14 @@ a{color:inherit}
 .check-field input{appearance:none;-webkit-appearance:none;flex:0 0 auto;width:20px;height:20px;border:2px solid var(--line-strong);border-radius:6px;display:grid;place-items:center;cursor:pointer}
 .check-field input:checked{background:#16a34a;border-color:#16a34a}
 .check-field input:checked::after{content:"";width:10px;height:5px;border:2px solid #fff;border-top:0;border-right:0;transform:rotate(-45deg) translateY(-1px)}
+.check-row{display:flex;gap:10px;align-items:center}
+.emoji-check{display:inline-grid;place-items:center;width:40px;height:40px;border:2px solid var(--line-strong);border-radius:9px;cursor:pointer;font-size:19px;background:var(--surface)}
+.emoji-check input{display:none}
+.emoji-check span{opacity:.45;line-height:1;filter:grayscale(.4)}
+.emoji-check.on span{opacity:1;filter:none}
+.emoji-check.av.on{border-color:#0E7C86;background:rgba(14,124,134,.10)}
+.emoji-check.rep.on{border-color:#16a34a;background:rgba(22,163,74,.10)}
+.check-field.av input:checked{background:#0E7C86;border-color:#0E7C86}
 .mp-ech{font-weight:600;color:var(--ink);margin-top:3px}
 
 /* ============================================================
@@ -876,7 +884,10 @@ a{color:inherit}
       </div>
       <div class="field">
         <label>Statut de réponse</label>
-        <label class="check-field"><input type="checkbox" id="f-repondu"> Répondu (offre remise)</label>
+        <div class="check-row">
+          <label class="emoji-check av" title="À valider"><input type="checkbox" id="f-avalider"><span>🔍</span></label>
+          <label class="emoji-check rep" title="Répondu (offre remise)"><input type="checkbox" id="f-repondu"><span>✅</span></label>
+        </div>
       </div>
 
       <div class="field full">
@@ -968,6 +979,7 @@ function pinIcon(color, symbol){
 }
 /* symbole affiché au centre du pin selon l'état de l'affaire */
 function pinSymbol(a){
+  if(a.avalider)            return '🔍';
   if(a.etat==='En travaux') return '🏗️';
   if(a.etat==='Terminé')    return '💵';
   if(a.etat==='Sans suite') return '♻️';
@@ -977,7 +989,8 @@ function pinSymbol(a){
   return null;
 }
 /* couleur du pin : bleu ciel pour un appel d'offre répondu, sinon couleur de l'état */
-function pinColor(etat, repondu){
+function pinColor(etat, repondu, avalider){
+  if(avalider) return '#F4C20D';                          // jaune "à valider"
   if(etat==="Appel d'offre" && repondu) return '#38BDF8'; // bleu ciel
   return ETAT_COLOR[etat];
 }
@@ -1407,7 +1420,7 @@ function toggleMiniMap(e, a){
   if(!window.L){ box.textContent='Carte indisponible (Leaflet non chargé).'; return; }
   const m = L.map(box,{attributionControl:false,zoomControl:true}).setView([a.adresse.lat,a.adresse.lng],15);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(m);
-  L.marker([a.adresse.lat,a.adresse.lng],{icon:pinIcon(pinColor(a.etat,a.repondu), pinSymbol(a))}).addTo(m);
+  L.marker([a.adresse.lat,a.adresse.lng],{icon:pinIcon(pinColor(a.etat,a.repondu,a.avalider), pinSymbol(a))}).addTo(m);
   box._map = m;
   setTimeout(()=>m.invalidateSize(),0);
 }
@@ -1427,6 +1440,9 @@ function openModal(a=null){
   $('f-nom').value     = a?.nom || '';
   $('f-echeance').value= a?.echeance || '';
   $('f-repondu').checked = !!a?.repondu;
+  $('f-avalider').checked = !!a?.avalider;
+  $('f-repondu').closest('.emoji-check').classList.toggle('on', !!a?.repondu);
+  $('f-avalider').closest('.emoji-check').classList.toggle('on', !!a?.avalider);
   $('f-adresse').value = a?.adresse?.text || '';
   $('f-ent').value     = a?.client?.entreprise || '';
   $('f-contact').value = a?.client?.contact || '';
@@ -1453,15 +1469,16 @@ function updateCoordsLabel(){
 }
 
 function modalIcon(){
-  const etat=$('f-etat').value, rep=$('f-repondu').checked;
+  const etat=$('f-etat').value, rep=$('f-repondu').checked, av=$('f-avalider').checked;
   let sym=null;
-  if(etat==='En travaux') sym='🏗️';
+  if(av) sym='🔍';
+  else if(etat==='En travaux') sym='🏗️';
   else if(etat==='Terminé') sym='💵';
   else if(etat==='Sans suite') sym='♻️';
   else if(etat==='En étude') sym='⚙️';
   else if(rep) sym='🕑';
   else if(etat==="Appel d'offre") sym='📥';
-  return pinIcon(pinColor(etat,rep), sym);
+  return pinIcon(pinColor(etat,rep,av), sym);
 }
 
 function setMarker(lat,lng,recenter=false){
@@ -1521,6 +1538,7 @@ function saveModal(){
     nom,
     echeance: $('f-echeance').value || null,
     repondu: $('f-repondu').checked,
+    avalider: $('f-avalider').checked,
     adresse: {
       text: $('f-adresse').value.trim(),
       lat: modalCoords.lat, lng: modalCoords.lng
@@ -1832,7 +1850,7 @@ function renderOverview(){
 
   const pts=[];
   for(const a of list){
-    const mk = L.marker([a.adresse.lat,a.adresse.lng],{icon:pinIcon(pinColor(a.etat,a.repondu), pinSymbol(a))})
+    const mk = L.marker([a.adresse.lat,a.adresse.lng],{icon:pinIcon(pinColor(a.etat,a.repondu,a.avalider), pinSymbol(a))})
       .addTo(overviewLayer)
       .bindPopup(overviewPopup(a));
     mk._affaire = a;              // pour récupérer la météo au clic
@@ -1986,7 +2004,8 @@ document.getElementById('viewtoggle').addEventListener('click',e=>{
   const b=e.target.closest('.vt'); if(b) setView(b.dataset.view);
 });
 $('f-etat').addEventListener('change',()=>{ if(modalMarker) modalMarker.setIcon(modalIcon()); });
-$('f-repondu').addEventListener('change',()=>{ if(modalMarker) modalMarker.setIcon(modalIcon()); });
+$('f-repondu').addEventListener('change',(e)=>{ e.target.closest('.emoji-check').classList.toggle('on', e.target.checked); if(modalMarker) modalMarker.setIcon(modalIcon()); });
+$('f-avalider').addEventListener('change',(e)=>{ e.target.closest('.emoji-check').classList.toggle('on', e.target.checked); if(modalMarker) modalMarker.setIcon(modalIcon()); });
 
 /* ---------- Tiroir Outils ---------- */
 function printHtml(html){
