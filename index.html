@@ -441,6 +441,23 @@ a{color:inherit}
 .mh-item{display:flex;align-items:center;gap:9px;padding:7px 9px;border-radius:6px;font-size:13px;cursor:pointer;color:var(--ink)}
 .mh-item:hover{background:var(--surface-2)}
 .mh-item input{margin:0;flex:0 0 auto}
+.plan-ov{position:absolute;z-index:650;transform-origin:center center;cursor:move;touch-action:none}
+.plan-ov img{width:100%;height:100%;display:block;pointer-events:none;border:2px solid #F4C20D;box-shadow:0 0 0 1px rgba(0,0,0,.35)}
+.plan-h{position:absolute;width:16px;height:16px;background:#fff;border:2px solid var(--brand);border-radius:50%;z-index:2}
+.plan-h.tl{left:-8px;top:-8px;cursor:nwse-resize}
+.plan-h.tr{right:-8px;top:-8px;cursor:nesw-resize}
+.plan-h.bl{left:-8px;bottom:-8px;cursor:nesw-resize}
+.plan-h.br{right:-8px;bottom:-8px;cursor:nwse-resize}
+.plan-rot{position:absolute;left:50%;top:-34px;transform:translateX(-50%);width:18px;height:18px;background:var(--brand);border:2px solid #fff;border-radius:50%;cursor:grab;z-index:2}
+.plan-rot::before{content:"";position:absolute;left:50%;top:15px;width:2px;height:17px;background:var(--brand);transform:translateX(-50%)}
+.plan-ctrl{position:absolute;left:12px;bottom:26px;z-index:700;display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:8px;box-shadow:var(--sh-2);padding:7px 11px;font-size:12.5px}
+.plan-ctrl .pc-lbl{font-weight:700;color:var(--brand)}
+.plan-ctrl input[type=range]{width:90px}
+.plan-ctrl button{border:0;background:transparent;cursor:pointer;font-size:15px;padding:2px 5px;border-radius:6px;line-height:1}
+.plan-ctrl button:hover{background:var(--surface-2)}
+.plan-ov.locked{cursor:default}
+.plan-ov.locked img{border-color:#16a34a}
+.plan-ov.locked .plan-h,.plan-ov.locked .plan-rot{display:none}
 .board.hidden{display:none}
 #overview-map{width:100%;height:calc(100vh - 230px);min-height:360px;border:0;border-radius:0;background:var(--surface-2);position:relative;z-index:0}
 .map-tools{display:flex;flex-direction:column;gap:3px;background:var(--surface);border:1px solid rgba(0,0,0,.18);border-radius:8px;box-shadow:0 1px 5px rgba(0,0,0,.3);padding:3px}
@@ -891,6 +908,11 @@ a{color:inherit}
     <div class="mh-sep"></div>
     <div class="mh-group" id="mh-annot">
       <span class="mh-title">Annotations</span>
+    </div>
+    <div class="mh-sep"></div>
+    <div class="mh-group">
+      <span class="mh-title">Plan</span>
+      <button class="mh-btn" id="mh-plan" title="Superposer un plan (PDF ou image) — temporaire"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="3" width="13" height="13" rx="2"/><path d="M8 8h13v13H8z" fill="var(--surface)"/></svg></button>
     </div>
   </div>
   <div id="overview-map"></div>
@@ -1777,6 +1799,7 @@ document.getElementById('filters').addEventListener('click',e=>{
 let currentView='board';
 let overviewMap=null, overviewLayer=null;
 let drawLayer=null, drawTool=null, drawTemp=null, freeDrawing=false, drawToolbarEl=null;
+let planOverlay=null, pdfjsReady=null;
 const drawIdLayers={};
 
 /* ---------- Outils de dessin & mesure sur la carte ---------- */
@@ -1871,6 +1894,7 @@ function initMapHeader(map){
   drawToolbarEl=annot;
   document.getElementById('mh-zoomin').onclick=()=>map.zoomIn();
   document.getElementById('mh-zoomout').onclick=()=>map.zoomOut();
+  document.getElementById('mh-plan').onclick=importPlan;
   const bBtn=document.getElementById('mh-base-btn'), bMenu=document.getElementById('mh-base-menu');
   const fBtn=document.getElementById('mh-filters-btn'), fMenu=document.getElementById('mh-filters-menu');
   bBtn.onclick=e=>{ e.stopPropagation(); fMenu.classList.add('hidden'); bMenu.classList.toggle('hidden'); };
@@ -1897,6 +1921,106 @@ function sizeMap(){
   const top=box.getBoundingClientRect().top;
   box.style.height=Math.max(360, window.innerHeight - top - 6)+'px';
   if(overviewMap) overviewMap.invalidateSize();
+}
+
+/* ---------- Superposition d'un plan (PDF/image) — temporaire, non sauvegardé ---------- */
+function loadPdfJs(){
+  if(window.pdfjsLib) return Promise.resolve();
+  if(pdfjsReady) return pdfjsReady;
+  pdfjsReady=new Promise((res,rej)=>{
+    const s=document.createElement('script');
+    s.src='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+    s.onload=()=>{ try{ pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'; }catch(e){} res(); };
+    s.onerror=()=>rej(new Error('pdfjs')); document.head.append(s);
+  });
+  return pdfjsReady;
+}
+function importPlan(){
+  const inp=document.createElement('input'); inp.type='file'; inp.accept='application/pdf,image/*';
+  inp.onchange=async()=>{
+    const file=inp.files[0]; if(!file) return;
+    try{
+      if(file.type==='application/pdf' || /\.pdf$/i.test(file.name)){
+        toast('Chargement du plan…');
+        await loadPdfJs();
+        const buf=await file.arrayBuffer();
+        const pdf=await pdfjsLib.getDocument({data:buf}).promise;
+        const page=await pdf.getPage(1);
+        const vp=page.getViewport({scale:2});
+        const cv=document.createElement('canvas'); cv.width=vp.width; cv.height=vp.height;
+        await page.render({canvasContext:cv.getContext('2d'), viewport:vp}).promise;
+        placePlan(cv.toDataURL('image/png'), vp.width, vp.height);
+      } else {
+        const url=URL.createObjectURL(file);
+        const im=new Image(); im.onload=()=>placePlan(url, im.naturalWidth||1, im.naturalHeight||1); im.src=url;
+      }
+    }catch(e){ toast('Impossible de charger ce plan (PDF/image).'); }
+  };
+  inp.click();
+}
+function mppAt(lat, zoom){ return 40075016.686*Math.cos(lat*Math.PI/180)/(256*Math.pow(2,zoom)); }
+function placePlan(src, wPx, hPx){
+  if(!overviewMap) return;
+  removePlan();
+  const map=overviewMap, container=map.getContainer(), center=map.getCenter();
+  const b=map.getBounds();
+  const wMeters=map.distance(b.getNorthWest(), b.getNorthEast())*0.6;
+  const hMeters=wMeters*(hPx/wPx);
+  const img=el('img',{src}); img.style.opacity=.7;
+  const box=el('div',{class:'plan-ov'}, img);
+  ['tl','tr','bl','br'].forEach(c=>box.append(el('div',{class:'plan-h '+c})));
+  box.append(el('div',{class:'plan-rot'}));
+  container.append(box);
+  const range=el('input',{type:'range',min:'20',max:'100',value:'70'});
+  range.addEventListener('input',()=>{ img.style.opacity=range.value/100; });
+  const lockBtn=el('button',{class:'pc-lock',title:'Verrouiller le calque'},'🔓');
+  const delBtn=el('button',{class:'pc-del',title:'Supprimer le plan',onclick:removePlan},'❌');
+  const ctrl=el('div',{class:'plan-ctrl'}, el('span',{class:'pc-lbl'},'Plan'), range, lockBtn, delBtn);
+  container.append(ctrl);
+  L.DomEvent.disableClickPropagation(ctrl); L.DomEvent.disableScrollPropagation(ctrl);
+  ctrl.addEventListener('pointerdown',e=>e.stopPropagation());
+  planOverlay={center,wMeters,hMeters,rot:0,locked:false,el:box,ctrl,img};
+  lockBtn.onclick=()=>{ planOverlay.locked=!planOverlay.locked; box.classList.toggle('locked',planOverlay.locked); lockBtn.textContent=planOverlay.locked?'🔒':'🔓'; lockBtn.title=planOverlay.locked?'Déverrouiller le calque':'Verrouiller le calque'; };
+  wirePlanInteractions();
+  map.on('move zoom moveend zoomend viewreset resize', updatePlan);
+  updatePlan();
+  toast('Plan posé — ajuste par les angles, rotation par la poignée haute');
+}
+function removePlan(){
+  if(!planOverlay) return;
+  overviewMap.off('move zoom moveend zoomend viewreset resize', updatePlan);
+  planOverlay.el.remove(); planOverlay.ctrl.remove(); planOverlay=null;
+}
+function updatePlan(){
+  if(!planOverlay||!overviewMap) return;
+  const p=planOverlay, m=overviewMap;
+  const cpt=m.latLngToContainerPoint(p.center);
+  const mpp=mppAt(p.center.lat, m.getZoom());
+  const wpx=p.wMeters/mpp, hpx=p.hMeters/mpp;
+  const s=p.el.style;
+  s.width=wpx+'px'; s.height=hpx+'px';
+  s.left=(cpt.x-wpx/2)+'px'; s.top=(cpt.y-hpx/2)+'px';
+  s.transform=`rotate(${p.rot}deg)`;
+}
+function wirePlanInteractions(){
+  const p=planOverlay, box=p.el, map=overviewMap, container=map.getContainer();
+  const centerClient=()=>{ const r=container.getBoundingClientRect(), pt=map.latLngToContainerPoint(p.center); return {x:r.left+pt.x, y:r.top+pt.y}; };
+  let mode=null, start=null;
+  const move=(e)=>{
+    if(mode==='move'){ const np=L.point(start.center.x+(e.clientX-start.cx), start.center.y+(e.clientY-start.cy)); p.center=map.containerPointToLatLng(np); }
+    else if(mode==='rot'){ const c=centerClient(); p.rot=start.rot+(Math.atan2(e.clientY-c.y,e.clientX-c.x)-start.ang)*180/Math.PI; }
+    else { const c=centerClient(); const d=Math.hypot(e.clientX-c.x,e.clientY-c.y); const sc=Math.max(.05,d/(start.dist||1)); p.wMeters=start.w*sc; p.hMeters=start.h*sc; }
+    updatePlan();
+  };
+  const up=()=>{ document.removeEventListener('pointermove',move); mode=null; map.dragging.enable(); };
+  const down=(e,m)=>{ if(p.locked) return; e.preventDefault(); e.stopPropagation(); mode=m; map.dragging.disable();
+    const c=centerClient();
+    start={cx:e.clientX,cy:e.clientY, center:map.latLngToContainerPoint(p.center), dist:Math.hypot(e.clientX-c.x,e.clientY-c.y), w:p.wMeters,h:p.hMeters, ang:Math.atan2(e.clientY-c.y,e.clientX-c.x), rot:p.rot};
+    document.addEventListener('pointermove',move); document.addEventListener('pointerup',up,{once:true});
+  };
+  box.addEventListener('pointerdown',e=>{ if(e.target.classList.contains('plan-h')||e.target.classList.contains('plan-rot')) return; down(e,'move'); });
+  box.querySelectorAll('.plan-h').forEach(hd=>hd.addEventListener('pointerdown',e=>down(e,'resize')));
+  box.querySelector('.plan-rot').addEventListener('pointerdown',e=>down(e,'rot'));
 }
 
 function setView(v){
