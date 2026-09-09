@@ -426,10 +426,23 @@ a{color:inherit}
 .viewtoggle .vt:hover{color:#fff}
 .viewtoggle .vt.on{background:var(--hivis);color:var(--hivis-dark)}
 
-.mapview{max-width:1500px;margin:0 auto;padding:14px 18px 40px;position:relative}
+.mapview{position:relative}
 .mapview.hidden{display:none}
+.map-header{position:relative;z-index:5;display:flex;align-items:center;gap:14px;flex-wrap:wrap;background:var(--surface);border-bottom:1px solid var(--line);padding:7px 14px;box-shadow:var(--sh-1)}
+.mh-group{display:flex;align-items:center;gap:4px}
+.mh-title{font:700 10.5px/1 "Space Grotesk",sans-serif;letter-spacing:.7px;text-transform:uppercase;color:var(--muted);margin-right:6px}
+.mh-sep{width:1px;height:26px;background:var(--line)}
+.mh-btn{width:34px;height:34px;border:1px solid var(--line-strong);background:var(--surface);border-radius:7px;cursor:pointer;display:grid;place-items:center;color:var(--ink);padding:0}
+.mh-btn:hover{background:var(--surface-2)}
+.mh-btn.on{background:var(--brand);color:#fff;border-color:var(--brand)}
+.mh-dd{position:relative}
+.mh-menu{position:absolute;top:calc(100% + 6px);left:0;z-index:1200;background:var(--surface);border:1px solid var(--line);border-radius:8px;box-shadow:var(--sh-2);padding:6px;min-width:210px;display:flex;flex-direction:column;gap:2px}
+.mh-menu.hidden{display:none}
+.mh-item{display:flex;align-items:center;gap:9px;padding:7px 9px;border-radius:6px;font-size:13px;cursor:pointer;color:var(--ink)}
+.mh-item:hover{background:var(--surface-2)}
+.mh-item input{margin:0;flex:0 0 auto}
 .board.hidden{display:none}
-#overview-map{height:calc(100vh - 210px);min-height:440px;border-radius:var(--r);border:1px solid var(--line);box-shadow:var(--sh-1);background:var(--surface-2);position:relative;z-index:0}
+#overview-map{width:100%;height:calc(100vh - 230px);min-height:360px;border:0;border-radius:0;background:var(--surface-2);position:relative;z-index:0}
 .map-tools{display:flex;flex-direction:column;gap:3px;background:var(--surface);border:1px solid rgba(0,0,0,.18);border-radius:8px;box-shadow:0 1px 5px rgba(0,0,0,.3);padding:3px}
 .map-tools button{width:34px;height:34px;border:0;background:transparent;border-radius:6px;cursor:pointer;display:grid;place-items:center;color:var(--ink)}
 .map-tools button:hover{background:var(--surface-2)}
@@ -642,6 +655,19 @@ a{color:inherit}
 .rt-edit ul{margin:6px 0;padding-left:22px}
 .rt-edit.rt-notes{min-height:calc(100vh - 262px)}
 .rt-edit.rt-doc{min-height:320px}
+.file-add{background:var(--brand);color:#fff;border:1px solid var(--brand);border-radius:var(--r-sm);padding:9px 14px;font-weight:600;font-size:13px;cursor:pointer;margin-bottom:12px}
+.file-add:hover{background:var(--brand-700)}
+.files-list{display:flex;flex-direction:column;gap:8px}
+.files-empty{font-size:13px;color:var(--muted);padding:6px 2px}
+.file-card{display:flex;align-items:center;gap:11px;border:1px solid var(--line);border-radius:var(--r-sm);padding:8px 10px;background:var(--surface)}
+.file-thumb{width:46px;height:46px;border-radius:6px;object-fit:cover;flex:0 0 auto;border:1px solid var(--line);background:var(--surface-2)}
+.file-thumb.pdf{display:grid;place-items:center;font-size:22px}
+.file-meta{flex:1;min-width:0}
+.file-name{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.file-sz{font-size:11.5px;color:var(--muted)}
+.file-acts{display:flex;gap:4px;flex:0 0 auto}
+.file-acts button{width:30px;height:30px;border:1px solid var(--line-strong);background:var(--surface);border-radius:6px;cursor:pointer;font-size:14px}
+.file-acts button:hover{background:var(--surface-2)}
 .calc{display:flex;flex-direction:column;gap:10px}
 .pane-toolbar{display:flex;justify-content:flex-end;margin-bottom:8px}
 .pane-print{background:var(--surface);border:1px solid var(--line-strong);border-radius:var(--r-xs);padding:6px 11px;font-size:12.5px;font-weight:600;color:var(--brand);cursor:pointer}
@@ -848,6 +874,25 @@ a{color:inherit}
 
 <!-- ============ VUE CARTE GLOBALE ============ -->
 <section class="mapview hidden" id="mapview">
+  <div class="map-header" id="map-header">
+    <div class="mh-group">
+      <span class="mh-title">Carte</span>
+      <button class="mh-btn" id="mh-zoomout" title="Dézoomer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14"/></svg></button>
+      <button class="mh-btn" id="mh-zoomin" title="Zoomer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+      <div class="mh-dd">
+        <button class="mh-btn" id="mh-base-btn" title="Fond de carte"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="m12 2 9 5-9 5-9-5 9-5Z"/><path d="m3 12 9 5 9-5"/><path d="m3 17 9 5 9-5"/></svg></button>
+        <div class="mh-menu hidden" id="mh-base-menu"></div>
+      </div>
+      <div class="mh-dd">
+        <button class="mh-btn" id="mh-filters-btn" title="Filtres / surcouches"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h18l-7 8v6l-4-2v-4L3 5Z"/></svg></button>
+        <div class="mh-menu hidden" id="mh-filters-menu"></div>
+      </div>
+    </div>
+    <div class="mh-sep"></div>
+    <div class="mh-group" id="mh-annot">
+      <span class="mh-title">Annotations</span>
+    </div>
+  </div>
   <div id="overview-map"></div>
   <div class="map-note hidden" id="map-note"></div>
 </section>
@@ -1232,16 +1277,18 @@ function renderLane(a){
 function allDone(ev){ const n=ev.notes||[]; return n.length>0 && n.every(x=>x.done); }
 function eventIcon(ev){
   if(ev.type==='doc') return '📋';
+  if(ev.type==='file') return '📎';
   return allDone(ev) ? '✅' : '☑️';
 }
 function eventTitle(ev){
   if(ev.title && ev.title.trim()) return ev.title.trim();
-  return ev.type==='doc' ? 'Document' : 'To-Do';
+  return ev.type==='doc' ? 'Document' : ev.type==='file' ? 'Pièce jointe' : 'To-Do';
 }
 function nodeTooltip(ev){ return fmtTs(ev.ts)+' — '+eventTitle(ev); }
 
 function renderEventNode(a, ev){
-  const node = el('button',{class:'event-node '+(ev.type==='doc'?'doc':'todo'), dataset:{id:ev.id}, title:nodeTooltip(ev)}, eventIcon(ev));
+  const cls = ev.type==='doc'?'doc':ev.type==='file'?'file':'todo';
+  const node = el('button',{class:'event-node '+cls, dataset:{id:ev.id}, title:nodeTooltip(ev)}, eventIcon(ev));
   node.addEventListener('click',()=>openEventModal(a,ev));
   return node;
 }
@@ -1257,9 +1304,10 @@ function persistDebounced(){ clearTimeout(_pt); _pt=setTimeout(persist,400); }
 function openEventModal(a, ev){
   evEditing={a,ev};
   const isDoc = ev.type==='doc';
+  const isFile = ev.type==='file';
   const badge = document.getElementById('ev-type-badge');
-  badge.className='ev-type-badge '+(isDoc?'doc':'todo');
-  badge.textContent = isDoc ? '📋 Document' : (allDone(ev)?'✅ To-Do':'☑️ To-Do');
+  badge.className='ev-type-badge '+(isDoc?'doc':isFile?'file':'todo');
+  badge.textContent = isDoc ? '📋 Document' : isFile ? '📎 Pièce jointe' : (allDone(ev)?'✅ To-Do':'☑️ To-Do');
 
   const ti = document.getElementById('ev-title');
   ti.value = ev.title||'';
@@ -1273,6 +1321,8 @@ function openEventModal(a, ev){
     red.editor.classList.add('rt-doc');
     red.editor.setAttribute('data-ph','Collez ou saisissez vos informations…');
     body.append(red.wrap);
+  }else if(isFile){
+    buildFilePane(a, ev, body);
   }else{
     const notes = el('ul',{class:'notes'});
     (ev.notes||[]).forEach(nt=>notes.append(renderNote(a,ev,nt)));
@@ -1321,6 +1371,9 @@ function printEvent(){
   let inner;
   if(ev.type==='doc'){
     inner = `<div class="doc">${ev.text||''}</div>`;
+  }else if(ev.type==='file'){
+    const items=(ev.files||[]).map(f=>`<li>📎 ${escapeHtml(f.name)}</li>`).join('');
+    inner = `<ul class="todo">${items||'<li>(aucune pièce jointe)</li>'}</ul>`;
   }else{
     const items=(ev.notes||[]).map(n=>
       `<li class="${n.done?'done':''}"><span class="box">${n.done?'☑':'☐'}</span> ${escapeHtml(n.text)}</li>`).join('');
@@ -1369,13 +1422,45 @@ function renderNote(a, ev, nt){
    ============================================================================ */
 function addEvent(a, track, type='todo'){
   const ev = {id:uid(), ts:new Date().toISOString(), type, title:''};
-  if(type==='doc') ev.text=''; else ev.notes=[];
+  if(type==='doc') ev.text=''; else if(type==='file') ev.files=[]; else ev.notes=[];
   a.events = a.events||[]; a.events.push(ev); persist();
   track.classList.remove('empty');
   const node = renderEventNode(a, ev);
   track.insertBefore(node, track.querySelector('.add-node'));
   track.scrollTo({left:track.scrollWidth, behavior:'smooth'});
   openEventModal(a, ev);
+}
+
+function humanSize(b){ b=b||0; return b<1024?b+' o':b<1048576?Math.round(b/1024)+' Ko':(b/1048576).toFixed(1)+' Mo'; }
+function dataURLtoBlob(d){ const [m,b]=d.split(','); const mime=(m.match(/:(.*?);/)||[])[1]||'application/octet-stream'; const bin=atob(b); const arr=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++)arr[i]=bin.charCodeAt(i); return new Blob([arr],{type:mime}); }
+function openAttachment(f){ try{ const url=URL.createObjectURL(dataURLtoBlob(f.data)); window.open(url,'_blank'); setTimeout(()=>URL.revokeObjectURL(url),60000); }catch(e){ window.open(f.data,'_blank'); } }
+function buildFilePane(a, ev, body){
+  const list=el('div',{class:'files-list'});
+  const renderFiles=()=>{
+    list.innerHTML='';
+    (ev.files||[]).forEach(f=>{
+      const thumb = (f.mime||'').startsWith('image/') ? el('img',{class:'file-thumb',src:f.data}) : el('div',{class:'file-thumb pdf'},'📄');
+      list.append(el('div',{class:'file-card'},
+        thumb,
+        el('div',{class:'file-meta'}, el('div',{class:'file-name',title:f.name}, f.name), el('div',{class:'file-sz'}, humanSize(f.size))),
+        el('div',{class:'file-acts'},
+          el('button',{title:'Ouvrir',onclick:()=>openAttachment(f)},'↗'),
+          el('button',{title:'Supprimer',onclick:()=>{ ev.files=(ev.files||[]).filter(x=>x.id!==f.id); persist(); renderFiles(); refreshEventNode(ev); }},'🗑'))));
+    });
+    if(!(ev.files||[]).length) list.append(el('div',{class:'files-empty'},'Aucune pièce jointe.'));
+  };
+  const input=el('input',{type:'file',accept:'image/*,application/pdf',multiple:true,style:'display:none'});
+  input.addEventListener('change',()=>{
+    [...input.files].forEach(file=>{
+      if(file.size>4*1024*1024){ toast(`« ${file.name} » dépasse 4 Mo`); return; }
+      const r=new FileReader();
+      r.onload=()=>{ ev.files=ev.files||[]; ev.files.push({id:uid(),name:file.name,mime:file.type||'application/octet-stream',size:file.size,data:r.result}); persist(); renderFiles(); refreshEventNode(ev); };
+      r.readAsDataURL(file);
+    });
+    input.value='';
+  });
+  body.append(el('button',{class:'file-add',onclick:()=>input.click()},'🧷 Ajouter image / PDF'), input, list);
+  renderFiles();
 }
 
 /* menu flottant : Nouvelle To-Do / Nouveau Document */
@@ -1388,7 +1473,10 @@ function openEventMenu(anchorEl, a, track){
       el('div',{}, el('b',{},'Nouvelle To-Do'), el('span',{class:'emi-sub'},'liste de tâches à cocher'))),
     el('button',{class:'evt-menu-item',onclick:()=>{ closeEventMenu(); addEvent(a,track,'doc'); }},
       el('span',{class:'emi-ic doc'},'📋'),
-      el('div',{}, el('b',{},'Nouveau Document'), el('span',{class:'emi-sub'},'texte libre / copier-coller')))
+      el('div',{}, el('b',{},'Nouveau Document'), el('span',{class:'emi-sub'},'texte libre / copier-coller'))),
+    el('button',{class:'evt-menu-item',onclick:()=>{ closeEventMenu(); addEvent(a,track,'file'); }},
+      el('span',{class:'emi-ic file'},'📎'),
+      el('div',{}, el('b',{},'Pièce jointe'), el('span',{class:'emi-sub'},'image ou PDF')))
   );
   document.body.append(menu);
   const r=anchorEl.getBoundingClientRect(), mw=menu.offsetWidth, mh=menu.offsetHeight;
@@ -1587,10 +1675,13 @@ function importJSON(file){
   reader.readAsText(file);
 }
 
+function backupName(manual){
+  const d=new Date(), p=n=>String(n).padStart(2,'0');
+  return `MOMOFlow_${d.getFullYear()}.${p(d.getMonth()+1)}.${p(d.getDate())}_${p(d.getHours())}.${p(d.getMinutes())}.${p(d.getSeconds())}_${manual?'manu':'auto'}.json`;
+}
 function manualBackup(){
   const blob=new Blob([backupPayload()],{type:'application/json'});
-  const d=new Date(),p=n=>String(n).padStart(2,'0');
-  const a=el('a',{href:URL.createObjectURL(blob),download:`momotion-${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}.json`});
+  const a=el('a',{href:URL.createObjectURL(blob),download:backupName(true)});
   document.body.append(a); a.click(); a.remove(); dirty=false; toast('Sauvegarde téléchargée');
 }
 function loadBackupFile(file){
@@ -1707,7 +1798,10 @@ function buildDrawFeature(f){
   else if(f.type==='ruler'||f.type==='poly') layer=L.polyline(lls,{color:'#1D4ED8',weight:3});
   else layer=L.polygon(lls,{color:'#16A34A',weight:2,fillColor:'#16A34A',fillOpacity:.15});
   if(f.type==='ruler'||f.type==='poly') layer.bindTooltip(fmtDist(llLen(lls)),{permanent:true,direction:'center',className:'measure-label'});
-  else if(f.type==='area') layer.bindTooltip(fmtArea(polyArea(lls)),{permanent:true,direction:'center',className:'measure-label'});
+  else if(f.type==='area'){
+    const per = llLen(lls) + (lls.length>1 ? overviewMap.distance(lls[lls.length-1], lls[0]) : 0);
+    layer.bindTooltip(fmtArea(polyArea(lls))+' · ⟺ '+fmtDist(per),{permanent:true,direction:'center',className:'measure-label'});
+  }
   layer.on('click',ev=>{ if(drawTool==='erase'){ L.DomEvent.stop(ev); removeDrawing(f.id); } });
   drawLayer.addLayer(layer); drawIdLayers[f.id]=layer;
 }
@@ -1762,23 +1856,47 @@ const DRAW_TOOLS=[
   {t:'area', title:'Aire — double-clic pour finir', svg:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5l14 3-4 11-8-2Z"/></svg>'},
   {t:'erase',title:'Gomme — clic sur un tracé ; double-clic sur la carte = tout effacer', svg:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 21-4-4a2 2 0 0 1 0-2.83l8-8a2 2 0 0 1 2.83 0l4 4a2 2 0 0 1 0 2.83L14 21Z"/><path d="M22 21H8"/></svg>'}
 ];
-function initDrawTools(map, ctrl){
+function initDrawTools(map){
   drawLayer=L.featureGroup().addTo(map);
-  if(ctrl) ctrl.addOverlay(drawLayer,'Annotations');
   drawings.forEach(buildDrawFeature);
-  const Ctrl=L.Control.extend({options:{position:'topright'}, onAdd:function(){
-    const div=L.DomUtil.create('div','map-tools');
-    div.innerHTML=DRAW_TOOLS.map(b=>`<button data-tool="${b.t}" title="${b.title}">${b.svg}</button>`).join('');
-    L.DomEvent.disableClickPropagation(div); L.DomEvent.disableScrollPropagation(div);
-    div.querySelectorAll('button').forEach(btn=>btn.onclick=()=>setDrawTool(btn.dataset.tool));
-    drawToolbarEl=div; return div;
-  }});
-  map.addControl(new Ctrl());
   map.on('mousedown', onDrawMouseDown);
   map.on('mousemove', onDrawMouseMove);
   map.on('mouseup', onDrawMouseUp);
   map.on('click', onDrawClick);
   map.on('dblclick', onDrawDblClick);
+}
+function initMapHeader(map){
+  const annot=document.getElementById('mh-annot');
+  DRAW_TOOLS.forEach(b=>{ const btn=el('button',{class:'mh-btn',dataset:{tool:b.t},title:b.title,onclick:()=>setDrawTool(b.t)}); btn.innerHTML=b.svg; annot.append(btn); });
+  drawToolbarEl=annot;
+  document.getElementById('mh-zoomin').onclick=()=>map.zoomIn();
+  document.getElementById('mh-zoomout').onclick=()=>map.zoomOut();
+  const bBtn=document.getElementById('mh-base-btn'), bMenu=document.getElementById('mh-base-menu');
+  const fBtn=document.getElementById('mh-filters-btn'), fMenu=document.getElementById('mh-filters-menu');
+  bBtn.onclick=e=>{ e.stopPropagation(); fMenu.classList.add('hidden'); bMenu.classList.toggle('hidden'); };
+  fBtn.onclick=e=>{ e.stopPropagation(); bMenu.classList.add('hidden'); fMenu.classList.toggle('hidden'); };
+  [bMenu,fMenu].forEach(mn=>mn.addEventListener('click',e=>e.stopPropagation()));
+  document.addEventListener('click',()=>{ bMenu.classList.add('hidden'); fMenu.classList.add('hidden'); });
+}
+function buildMapMenus(bases, overlays, defBase){
+  const bm=document.getElementById('mh-base-menu'); bm.innerHTML=''; let current=defBase;
+  Object.entries(bases).forEach(([name,layer])=>{
+    const inp=el('input',{type:'radio',name:'mh-base'}); inp.checked=(layer===defBase);
+    inp.addEventListener('change',()=>{ if(current) overviewMap.removeLayer(current); layer.addTo(overviewMap); if(layer.bringToBack) layer.bringToBack(); current=layer; });
+    bm.append(el('label',{class:'mh-item'}, inp, name));
+  });
+  const fm=document.getElementById('mh-filters-menu'); fm.innerHTML='';
+  Object.entries(overlays).forEach(([name,layer])=>{
+    const inp=el('input',{type:'checkbox'}); inp.checked=overviewMap.hasLayer(layer);
+    inp.addEventListener('change',()=>{ if(inp.checked) layer.addTo(overviewMap); else overviewMap.removeLayer(layer); });
+    fm.append(el('label',{class:'mh-item'}, inp, name));
+  });
+}
+function sizeMap(){
+  const box=document.getElementById('overview-map'); if(!box || currentView!=='map') return;
+  const top=box.getBoundingClientRect().top;
+  box.style.height=Math.max(360, window.innerHeight - top - 6)+'px';
+  if(overviewMap) overviewMap.invalidateSize();
 }
 
 function setView(v){
@@ -1787,7 +1905,7 @@ function setView(v){
   document.getElementById('board').classList.toggle('hidden', v!=='board');
   document.getElementById('mapview').classList.toggle('hidden', v!=='map');
   document.getElementById('agenda').classList.toggle('hidden', v!=='agenda');
-  if(v==='map') renderOverview();
+  if(v==='map'){ renderOverview(); setTimeout(sizeMap,30); }
   if(v==='agenda') renderAgenda();
 }
 
@@ -1802,7 +1920,7 @@ function renderOverview(){
   }
 
   if(!overviewMap){
-    overviewMap=L.map(box).setView([44.559,6.079],12); // Gap par défaut
+    overviewMap=L.map(box,{zoomControl:false}).setView([44.559,6.079],12); // Gap par défaut
     const plan   = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'});
     const sat    = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Imagerie © Esri, Maxar, Earthstar Geographics'});
     const topo   = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',{maxZoom:19,maxNativeZoom:17,attribution:'© OpenTopoMap (CC-BY-SA), © OpenStreetMap'});
@@ -1819,24 +1937,20 @@ function renderOverview(){
     const planIgn = geopfWMTS('GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2','image/png');
 
     // surcouches
-    const cadastre = geopfWMTS('CADASTRALPARCELS.PARCELLAIRE_EXPRESS','image/png');
-    const pentes   = geopfWMTS('GEOGRAPHICALGRIDSYSTEMS.SLOPES.MOUNTAIN','image/png'); pentes.setOpacity(0.6);
-    const admin    = wms('https://data.geopf.fr/wms-r/wms','ADMINEXPRESS-COG-CARTO.LATEST','IGN');
-    const geol     = wms('https://geoservices.brgm.fr/geologie','GEOLOGIE','BRGM');
+    const cadastre = geopfWMTS('CADASTRALPARCELS.PARCELLAIRE_EXPRESS','image/png'); cadastre.setZIndex(400);
+    const pentes   = geopfWMTS('GEOGRAPHICALGRIDSYSTEMS.SLOPES.MOUNTAIN','image/png'); pentes.setOpacity(0.6); pentes.setZIndex(401);
+    const admin    = wms('https://data.geopf.fr/wms-r/wms','ADMINEXPRESS-COG-CARTO.LATEST','IGN'); admin.setZIndex(402);
+    const geol     = wms('https://geoservices.brgm.fr/geologie','GEOLOGIE','BRGM'); geol.setZIndex(403);
 
-    const layerCtrl = L.control.layers(
-      {'Plan':plan,'Satellite':sat,'Topographique':topo,'Ortho IGN':ortho,'Plan IGN':planIgn},
-      {
-        'Cadastre (IGN)':cadastre,
-        'Pentes (IGN)':pentes,
-        'Limites communes (IGN)':admin,
-        'Géologie BRGM (test)':geol
-      },
-      {position:'topright'}
-    ).addTo(overviewMap);
     overviewLayer=L.layerGroup().addTo(overviewMap);
     overviewMap.on('popupopen', onPopupOpen);
-    initDrawTools(overviewMap, layerCtrl);
+    initDrawTools(overviewMap);
+    initMapHeader(overviewMap);
+    buildMapMenus(
+      {'Plan':plan,'Satellite':sat,'Topographique':topo,'Ortho IGN':ortho,'Plan IGN':planIgn},
+      {'Cadastre (IGN)':cadastre,'Pentes (IGN)':pentes,'Limites communes (IGN)':admin,'Géologie BRGM (test)':geol,'Annotations':drawLayer},
+      plan
+    );
   }
   overviewLayer.clearLayers();
 
@@ -2252,7 +2366,7 @@ async function doBackup(manual){
   if(!ok){ needReauth=true; updateBackupUI(); if(manual) toast('Autorisation refusée'); return; }
   needReauth=false;
   try{
-    const name=`momotion-${new Date().toISOString().slice(0,10)}.json`;
+    const name=backupName(manual);
     const fh=await backupDir.getFileHandle(name,{create:true});
     const w=await fh.createWritable(); await w.write(new Blob([backupPayload()],{type:'application/json'})); await w.close();
     localStorage.setItem('momotion_last_backup', new Date().toISOString());
@@ -2400,6 +2514,7 @@ function stickHeader(){
 }
 stickHeader();
 window.addEventListener('resize', stickHeader);
+window.addEventListener('resize', sizeMap);
 
 initTools();
 initCarnet();
