@@ -82,7 +82,7 @@ a{color:inherit}
   box-shadow:var(--sh-1);
 }
 .topbar-inner{
-  max-width:1500px;margin:0 auto;padding:11px 18px;
+  margin:0;padding:11px 18px;
   display:flex;align-items:center;gap:16px;flex-wrap:wrap;
 }
 .brand{display:flex;align-items:center;gap:11px;margin-right:4px}
@@ -146,7 +146,7 @@ a{color:inherit}
   box-shadow:var(--sh-1);
 }
 .filters{
-  max-width:1500px;margin:0 auto;padding:11px 18px;
+  margin:0;padding:11px 18px;
   display:flex;align-items:center;gap:9px;flex-wrap:wrap;
 }
 .filters .lbl{font-family:"IBM Plex Mono";font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-right:2px}
@@ -635,6 +635,9 @@ a{color:inherit}
 .note-type-menu button{display:flex;align-items:center;gap:9px;background:transparent;border:0;border-radius:var(--r-xs);padding:8px 10px;font-size:13px;font-weight:600;color:var(--ink);cursor:pointer;text-align:left;font-family:inherit}
 .note-type-menu button:hover{background:var(--surface-2)}
 .notes-index{display:flex;flex-direction:column;gap:6px}
+.notes-sort{display:flex;align-items:center;gap:8px;margin-bottom:11px;font-size:12.5px;color:var(--muted)}
+.notes-sort label{flex:0 0 auto}
+.notes-sort select{flex:1;border:1px solid var(--line-strong);border-radius:var(--r-xs);padding:6px 8px;font-size:12.5px;background:var(--surface);font-family:inherit;color:var(--ink);cursor:pointer}
 .notes-group-h{font:700 11px/1 "Space Grotesk",sans-serif;letter-spacing:.5px;text-transform:uppercase;color:var(--muted);margin:10px 2px 2px}
 .notes-group-h:first-child{margin-top:0}
 .confirm-bk{display:flex;align-items:center;justify-content:center;z-index:6000}
@@ -849,6 +852,14 @@ a{color:inherit}
         <button data-nt="table"><span>📊</span> Tableur</button>
       </div>
     </div>
+    <div class="notes-sort">
+      <label for="notes-sort-sel">Trier&nbsp;:</label>
+      <select id="notes-sort-sel">
+        <option value="type">Par type</option>
+        <option value="date">Par date de création</option>
+        <option value="name">Par nom</option>
+      </select>
+    </div>
     <div class="notes-index" id="notes-index"></div>
   </div>
 </aside>
@@ -877,18 +888,12 @@ a{color:inherit}
     <button class="close" id="carnet-close" aria-label="Fermer">×</button>
   </div>
   <div class="tools-tabs">
-    <button class="ctab on" data-ctab="entreprises">Entreprises</button>
-    <button class="ctab" data-ctab="clients">Clients</button>
+    <button class="ctab on" data-ctab="clients">Clients</button>
     <button class="ctab" data-ctab="sous">Sous-traitants</button>
   </div>
   <div class="carnet-search"><input type="search" id="carnet-search" placeholder="Rechercher…" autocomplete="off"></div>
   <div class="tools-body">
-    <div class="carnet-pane on" data-cpane="entreprises">
-      <button class="add-ent" id="add-ent-btn">＋ Ajouter une entreprise</button>
-      <div class="contact-form" id="cf-ent" hidden></div>
-      <div class="contact-list" id="list-ent"></div>
-    </div>
-    <div class="carnet-pane" data-cpane="clients">
+    <div class="carnet-pane on" data-cpane="clients">
       <button class="add-contact" data-type="clients">＋ Ajouter un client</button>
       <div class="contact-form" id="cf-clients" hidden></div>
       <div class="contact-list" id="list-clients"></div>
@@ -1499,7 +1504,7 @@ function printEvent(){
   }else if(ev.type==='table'){
     const t=ev.table||{cols:[],rows:[]};
     const head='<tr>'+t.cols.map(c=>`<th>${escapeHtml(c)}</th>`).join('')+'</tr>';
-    const rows=t.rows.map(r=>'<tr>'+t.cols.map((_,ci)=>`<td>${escapeHtml(r[ci]||'')}</td>`).join('')+'</tr>').join('');
+    const rows=t.rows.map((r,ri)=>'<tr>'+t.cols.map((_,ci)=>`<td>${escapeHtml(cellText(t,ri,ci))}</td>`).join('')+'</tr>').join('');
     inner = `<table class="ptable">${head}${rows}</table>`;
   }else{
     const items=(ev.notes||[]).map(n=>
@@ -1593,10 +1598,30 @@ function buildFilePane(a, ev, body){
   renderFiles();
 }
 
+function colToIndex(s){ let n=0; for(const c of s.toUpperCase()) n=n*26+(c.charCodeAt(0)-64); return n-1; }
+function colLetter(n){ let s=''; n++; while(n>0){ n--; s=String.fromCharCode(65+(n%26))+s; n=Math.floor(n/26);} return s; }
+function refOf(ri,ci){ return colLetter(ci)+(ri+1); }
+function computeCell(t, ri, ci, seen){
+  const raw=(t.rows[ri]||[])[ci];
+  if(typeof raw!=='string' || raw[0]!=='='){ if(raw==null||raw==='') return ''; const n=parseFloat(String(raw).replace(',','.')); return isNaN(n)?raw:n; }
+  seen=seen||new Set(); const key=ri+','+ci; if(seen.has(key)) return NaN; seen.add(key);
+  const expr=raw.slice(1).replace(/([A-Za-z]+)(\d+)/g,(m,col,row)=>{
+    const v=computeCell(t, parseInt(row,10)-1, colToIndex(col), new Set(seen));
+    return '('+((typeof v==='number'&&isFinite(v))?v:0)+')';
+  });
+  try{ const r=Function('"use strict";return ('+expr+')')(); return (typeof r==='number'&&isFinite(r))?r:NaN; }catch(e){ return NaN; }
+}
+function cellText(t, ri, ci){
+  const raw=(t.rows[ri]||[])[ci];
+  if(typeof raw==='string' && raw[0]==='='){ const v=computeCell(t,ri,ci); return v===''?'':(typeof v==='number'?String(Math.round(v*1e6)/1e6):(isNaN(v)?'#ERR':String(v))); }
+  return raw==null?'':String(raw);
+}
 function buildGridInto(container, t, onChange){
   const wrap=el('div',{class:'sheet-wrap'});
+  let cells=[];
+  const displayAll=()=>{ for(let r=0;r<t.rows.length;r++)for(let c=0;c<t.cols.length;c++){ const inp=cells[r]&&cells[r][c]; if(inp && document.activeElement!==inp) inp.value=cellText(t,r,c); } };
   const render=()=>{
-    wrap.innerHTML='';
+    wrap.innerHTML=''; cells=[];
     const table=el('table',{class:'sheet'});
     const htr=el('tr');
     t.cols.forEach((c,ci)=>{
@@ -1608,10 +1633,25 @@ function buildGridInto(container, t, onChange){
     table.append(el('thead',{}, htr));
     const tb=el('tbody');
     t.rows.forEach((row,ri)=>{
-      const tr=el('tr');
+      cells[ri]=[]; const tr=el('tr');
       t.cols.forEach((_,ci)=>{
-        const inp=el('input',{class:'sheet-c',value:row[ci]||''});
-        inp.addEventListener('input',()=>{ row[ci]=inp.value; onChange(); });
+        const inp=el('input',{class:'sheet-c',title:'Cellule '+refOf(ri,ci)+' — commence par = pour une formule'});
+        inp.value=cellText(t,ri,ci); cells[ri][ci]=inp;
+        inp.addEventListener('focus',()=>{ inp.value=(row[ci]==null?'':row[ci]); });
+        inp.addEventListener('input',()=>{ row[ci]=inp.value; onChange(); displayAll(); });
+        inp.addEventListener('blur',()=>{ inp.value=cellText(t,ri,ci); displayAll(); });
+        inp.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); const below=cells[ri+1]&&cells[ri+1][ci]; inp.blur(); if(below) below.focus(); } });
+        inp.addEventListener('mousedown',(e)=>{
+          const fc=document.activeElement;
+          if(fc && fc!==inp && fc.classList && fc.classList.contains('sheet-c') && fc.value[0]==='='){
+            e.preventDefault();
+            const ref=refOf(ri,ci);
+            const s=fc.selectionStart!=null?fc.selectionStart:fc.value.length, en=fc.selectionEnd!=null?fc.selectionEnd:fc.value.length;
+            fc.value=fc.value.slice(0,s)+ref+fc.value.slice(en);
+            const pos=s+ref.length; try{ fc.setSelectionRange(pos,pos); }catch(_){}
+            fc.dispatchEvent(new Event('input')); fc.focus();
+          }
+        });
         tr.append(el('td',{}, inp));
       });
       tr.append(el('td',{class:'sheet-delr-cell'}, el('button',{class:'sheet-delr',title:'Supprimer la ligne',onclick:()=>{ t.rows.splice(ri,1); onChange(); render(); }},'×')));
@@ -2523,24 +2563,32 @@ function migrateNotes(){
   }
 }
 const NOTE_ICON={note:'📝',todo:'☑️',table:'📊'};
+function noteRow(item){
+  const del=el('button',{class:'ni-del',title:'Supprimer',onclick:e=>{ e.stopPropagation(); tools.notesList=tools.notesList.filter(x=>x.id!==item.id); saveTools(); renderNotesIndex(); }},'×');
+  return el('div',{class:'note-item',onclick:()=>openNoteModal(item)},
+    el('span',{class:'ni-ic'}, NOTE_ICON[item.type]||'📝'),
+    el('span',{class:'ni-name'}, item.name||'(sans nom)'), del);
+}
 function renderNotesIndex(){
   const box=document.getElementById('notes-index'); if(!box) return; box.innerHTML='';
-  const list=tools.notesList||[];
+  const list=(tools.notesList||[]).slice();
   if(!list.length){ box.append(el('div',{class:'notes-empty'},'Aucune note. Clique « ＋ Nouvelle… ».')); return; }
-  [['note','📝 Notes'],['todo','☑️ To-Do'],['table','📊 Tableurs']].forEach(([type,label])=>{
-    const items=list.filter(i=>i.type===type);
-    if(!items.length) return;
-    box.append(el('div',{class:'notes-group-h'}, label));
-    items.forEach(item=>{
-      const del=el('button',{class:'ni-del',title:'Supprimer',onclick:e=>{ e.stopPropagation(); tools.notesList=tools.notesList.filter(x=>x.id!==item.id); saveTools(); renderNotesIndex(); }},'×');
-      box.append(el('div',{class:'note-item',onclick:()=>openNoteModal(item)},
-        el('span',{class:'ni-ic'}, NOTE_ICON[item.type]||'📝'),
-        el('span',{class:'ni-name'}, item.name||'(sans nom)'), del));
+  const sort=tools.notesSort||'type';
+  if(sort==='type'){
+    [['note','📝 Notes'],['todo','☑️ To-Do'],['table','📊 Tableurs']].forEach(([type,label])=>{
+      const items=list.filter(i=>i.type===type);
+      if(!items.length) return;
+      box.append(el('div',{class:'notes-group-h'}, label));
+      items.forEach(item=>box.append(noteRow(item)));
     });
-  });
+  } else {
+    if(sort==='name') list.sort((a,b)=>(a.name||'').toLowerCase().localeCompare((b.name||'').toLowerCase(),'fr'));
+    else list.sort((a,b)=>(b.created||0)-(a.created||0));   // date : plus récent en premier
+    list.forEach(item=>box.append(noteRow(item)));
+  }
 }
 function createNote(type){
-  const item={id:uid(),type,name:type==='note'?'Nouvelle note':type==='todo'?'Nouvelle To-Do':'Nouveau tableur'};
+  const item={id:uid(),type,created:Date.now(),name:type==='note'?'Nouvelle note':type==='todo'?'Nouvelle To-Do':'Nouveau tableur'};
   if(type==='note') item.html=''; else if(type==='todo') item.todos=[]; else item.table={cols:['Colonne 1','Colonne 2'],rows:[['',''],['','']]};
   tools.notesList=tools.notesList||[]; tools.notesList.push(item); saveTools(); renderNotesIndex(); openNoteModal(item);
 }
@@ -2564,11 +2612,13 @@ function printNote(item){
   let inner='';
   if(item.type==='note') inner=`<div class="doc">${item.html||''}</div>`;
   else if(item.type==='todo') inner='<ul>'+((item.todos||[]).map(t=>`<li>${t.done?'☑':'☐'} <span style="${t.done?'text-decoration:line-through;color:#888':''}">${escapeHtml(t.text)}</span></li>`).join('')||'<li>(vide)</li>')+'</ul>';
-  else { const t=item.table||{cols:[],rows:[]}; const head='<tr>'+t.cols.map(c=>`<th>${escapeHtml(c)}</th>`).join('')+'</tr>'; const rows=t.rows.map(r=>'<tr>'+t.cols.map((_,ci)=>`<td>${escapeHtml(r[ci]||'')}</td>`).join('')+'</tr>').join(''); inner=`<table class="ptable">${head}${rows}</table>`; }
+  else { const t=item.table||{cols:[],rows:[]}; const head='<tr>'+t.cols.map(c=>`<th>${escapeHtml(c)}</th>`).join('')+'</tr>'; const rows=t.rows.map((r,ri)=>'<tr>'+t.cols.map((_,ci)=>`<td>${escapeHtml(cellText(t,ri,ci))}</td>`).join('')+'</tr>').join(''); inner=`<table class="ptable">${head}${rows}</table>`; }
   printHtml(`<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><title>${title}</title>${style}</head><body><h1>${title}</h1>${inner}</body></html>`);
 }
 function initNotes(){
   migrateNotes();
+  const sortSel=document.getElementById('notes-sort-sel');
+  if(sortSel){ sortSel.value=tools.notesSort||'type'; sortSel.onchange=()=>{ tools.notesSort=sortSel.value; saveTools(); renderNotesIndex(); }; }
   renderNotesIndex();
   renderLinks();
   const addBtn=document.getElementById('add-note-btn'), menu=document.getElementById('note-type-menu');
@@ -2661,13 +2711,6 @@ function renderContacts(){
     arr.filter(match).sort((a,b)=>key(a).localeCompare(key(b),'fr')).forEach(c=>box.append(contactCard(c,type))); };
   fill(document.getElementById('list-clients'), contacts.clients, 'clients');
   fill(document.getElementById('list-sous'), contacts.sous_traitants, 'sous_traitants');
-  const le=document.getElementById('list-ent');
-  if(le){ le.innerHTML='';
-    (contacts.entreprises||[])
-      .filter(e=>!q || [e.nom,e.secteur,e.adresse].some(x=>(x||'').toLowerCase().includes(q)))
-      .sort((a,b)=>(a.nom||'').toLowerCase().localeCompare((b.nom||'').toLowerCase(),'fr'))
-      .forEach(e=>le.append(entrepriseCard(e)));
-  }
 }
 function openContactForm(type, c){
   const slot = document.getElementById(type==='clients'?'cf-clients':'cf-sous');
@@ -2697,7 +2740,6 @@ function initCarnet(){
     document.querySelectorAll('.carnet-pane').forEach(p=>p.classList.toggle('on',p.dataset.cpane===name));
   });
   document.querySelectorAll('.add-contact').forEach(b=>b.onclick=()=>openContactForm(b.dataset.type));
-  document.getElementById('add-ent-btn').onclick=()=>openEntrepriseForm();
   const search=document.getElementById('carnet-search');
   search.addEventListener('input',()=>{ contactSearch=search.value; renderContacts(); });
   renderContacts();
