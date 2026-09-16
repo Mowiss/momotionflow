@@ -37,6 +37,7 @@
 
   /* couleurs des états */
   --etat-ao:#2563EB;      /* Appel d'offre */
+  --etat-lo:#DC2626;      /* Location (rouge) */
   --etat-et:#D97706;      /* En étude */
   --etat-tx:#16A34A;      /* En travaux */
   --etat-tm:#EC4899;      /* Terminé (rose) */
@@ -157,6 +158,7 @@ a{color:inherit}
 }
 .chip .dot{width:9px;height:9px;border-radius:50%;background:currentColor}
 .chip[data-etat="Appel d'offre"]{--c:var(--etat-ao)}
+.chip[data-etat="Location"]{--c:var(--etat-lo)}
 .chip[data-etat="En étude"]{--c:var(--etat-et)}
 .chip[data-etat="En travaux"]{--c:var(--etat-tx)}
 .chip[data-etat="Terminé"]{--c:var(--etat-tm)}
@@ -193,6 +195,7 @@ a{color:inherit}
   content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--etat-c,var(--muted));
 }
 .lane[data-etat="Appel d'offre"] .lane-head{--etat-c:var(--etat-ao)}
+.lane[data-etat="Location"] .lane-head{--etat-c:var(--etat-lo)}
 .lane[data-etat="En étude"] .lane-head{--etat-c:var(--etat-et)}
 .lane[data-etat="En travaux"] .lane-head{--etat-c:var(--etat-tx)}
 .lane[data-etat="Terminé"] .lane-head{--etat-c:var(--etat-tm)}
@@ -965,6 +968,7 @@ a{color:inherit}
   <div class="filters" id="filters">
     <span class="lbl">États</span>
     <button class="chip on" data-etat="Appel d'offre" title="Cycle : tous → non répondu → à valider → répondu → masqués"><span class="dot"></span><span class="chip-label">Appel d'offre</span><span class="ao-ind"></span></button>
+    <button class="chip on" data-etat="Location"><span class="dot"></span>Location</button>
     <button class="chip on" data-etat="En étude"><span class="dot"></span>En étude</button>
     <button class="chip on" data-etat="En travaux"><span class="dot"></span>En travaux</button>
     <button class="chip on" data-etat="Terminé"><span class="dot"></span>Terminé</button>
@@ -1021,6 +1025,7 @@ a{color:inherit}
         <label for="f-etat">État</label>
         <select id="f-etat">
           <option>Appel d'offre</option>
+          <option>Location</option>
           <option>En étude</option>
           <option>En travaux</option>
           <option>Terminé</option>
@@ -1132,8 +1137,8 @@ a{color:inherit}
      Le reste du code (rendu, événements, notes) n'a pas à changer.
    ============================================================================ */
 
-const ETATS = ["Appel d'offre","En étude","En travaux","Terminé","Sans suite"];
-const ETAT_COLOR = {"Appel d'offre":"#2563EB","En étude":"#D97706","En travaux":"#16A34A","Terminé":"#EC4899","Sans suite":"#64748B"};
+const ETATS = ["Appel d'offre","Location","En étude","En travaux","Terminé","Sans suite"];
+const ETAT_COLOR = {"Appel d'offre":"#2563EB","Location":"#DC2626","En étude":"#D97706","En travaux":"#16A34A","Terminé":"#EC4899","Sans suite":"#64748B"};
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,7);
 
 /* Marqueur cartographique en SVG intégré — évite le bug des PNG Leaflet par défaut.
@@ -1150,6 +1155,7 @@ function pinIcon(color, symbol){
 /* symbole affiché au centre du pin selon l'état de l'affaire */
 function pinSymbol(a){
   if(a.avalider)            return '🔍';
+  if(a.etat==='Location')   return '🚚';
   if(a.etat==='En travaux') return '🏗️';
   if(a.etat==='Terminé')    return '💵';
   if(a.etat==='Sans suite') return '♻️';
@@ -1837,6 +1843,7 @@ function modalIcon(){
   const etat=$('f-etat').value, rep=$('f-repondu').checked, av=$('f-avalider').checked;
   let sym=null;
   if(av) sym='🔍';
+  else if(etat==='Location') sym='🚚';
   else if(etat==='En travaux') sym='🏗️';
   else if(etat==='Terminé') sym='💵';
   else if(etat==='Sans suite') sym='♻️';
