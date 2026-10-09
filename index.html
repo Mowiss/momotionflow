@@ -740,6 +740,11 @@ a{color:inherit}
 .sheet-addc button:hover{color:var(--brand)}
 .sheet-delr:hover{color:var(--danger)}
 .sheet-delr-cell{border:0!important;border-left:0}
+.sheet-gutter{display:flex;align-items:center;gap:2px;padding:0 2px}
+.sheet-drag{cursor:grab;color:var(--muted);font-size:13px;line-height:1;user-select:none;padding:2px}
+.sheet-drag:hover{color:var(--brand)}
+.sheet tr.dragging{opacity:.45}
+.sheet tr.row-drop td{box-shadow:inset 0 2px 0 var(--brand)}
 .sheet-addr{margin-top:9px;background:transparent;border:1px dashed var(--line-strong);color:var(--muted);border-radius:var(--r-sm);padding:6px 12px;font-size:13px;font-weight:600;cursor:pointer}
 .sheet-addr:hover{border-color:var(--brand);color:var(--brand)}
 .file-add{background:var(--brand);color:#fff;border:1px solid var(--brand);border-radius:var(--r-sm);padding:9px 14px;font-weight:600;font-size:13px;cursor:pointer;margin-bottom:12px}
@@ -951,15 +956,16 @@ a{color:inherit}
       <div class="menu-dropdown hidden" id="app-menu">
         <button class="menu-item" data-act="new"><span class="mi-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></span>Créer une nouvelle affaire</button>
         <div class="menu-sep"></div>
-        <button class="menu-item" data-act="savenow"><span class="mi-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg></span>Sauvegarder maintenant (dossier)</button>
-        <button class="menu-item" data-act="save"><span class="mi-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 21h14"/></svg></span>Sauvegarde manuelle (JSON)</button>
-        <button class="menu-item" data-act="load"><span class="mi-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21V9m0 0 4 4m-4-4-4 4M5 3h14"/></svg></span>Chargement manuel</button>
-        <button class="menu-item" data-act="dir"><span class="mi-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></svg></span>Dossier de sauvegarde auto</button>
+        <button class="menu-item" data-act="save-manu"><span class="mi-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 21h14"/></svg></span>Sauvegarde manuelle (.MTF)</button>
+        <button class="menu-item" data-act="load"><span class="mi-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21V9m0 0 4 4m-4-4-4 4M5 3h14"/></svg></span>Chargement manuel (.MTF / JSON)</button>
+        <div class="menu-sep"></div>
+        <button class="menu-item" data-act="auto-file"><span class="mi-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg></span><span id="auto-file-label">Fichier de sauvegarde auto (.MTF)</span></button>
+        <button class="menu-item" data-act="auto-delay"><span class="mi-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span><span id="auto-delay-label">Délai de sauvegarde auto</span></button>
         <div class="menu-sep" id="install-sep" hidden></div>
         <button class="menu-item" id="menu-install" data-act="install" hidden><span class="mi-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v9m0 0 3-3m-3 3-3-3"/><rect x="4" y="13" width="16" height="7" rx="2"/></svg></span>Installer l'application</button>
       </div>
     </div>
-    <input type="file" id="file-import" accept="application/json" hidden>
+    <input type="file" id="file-import" accept=".mtf,.MTF,.json,application/json" hidden>
   </div>
 </header>
 
@@ -1641,7 +1647,14 @@ function buildGridInto(container, t, onChange){
   while(t.colWidths.length < t.cols.length) t.colWidths.push(130);
   t.merges = t.merges || {};
   const K=(r,c)=>r+','+c;
-  let cells={}, active=null, rez=null;
+  let cells={}, active=null, rez=null, dragRow=null;
+
+  function moveRow(from,to){
+    if(from==null||to==null||from===to) return;
+    const [item]=t.rows.splice(from,1);
+    t.rows.splice(from<to?to-1:to,0,item);
+    t.merges={}; onChange(); render();
+  }
 
   const covered=()=>{ const s=new Set(); for(const k in t.merges){ const [r,c]=k.split(',').map(Number); const {rs,cs}=t.merges[k]; for(let dr=0;dr<rs;dr++)for(let dc=0;dc<cs;dc++){ if(!dr&&!dc) continue; s.add(K(r+dr,c+dc)); } } return s; };
   const clampMerges=()=>{ for(const k in t.merges){ const [r,c]=k.split(',').map(Number); let {rs,cs}=t.merges[k]; if(r>=t.rows.length||c>=t.cols.length){ delete t.merges[k]; continue; } rs=Math.min(rs,t.rows.length-r); cs=Math.min(cs,t.cols.length-c); if(rs<=1&&cs<=1) delete t.merges[k]; else t.merges[k]={rs,cs}; } };
@@ -1686,6 +1699,11 @@ function buildGridInto(container, t, onChange){
     const tb=el('tbody');
     t.rows.forEach((row,ri)=>{
       const tr=el('tr');
+      tr.addEventListener('dragover',e=>{ if(dragRow!=null){ e.preventDefault(); tr.classList.add('row-drop'); } });
+      tr.addEventListener('dragleave',()=>tr.classList.remove('row-drop'));
+      tr.addEventListener('drop',e=>{ e.preventDefault(); tr.classList.remove('row-drop'); moveRow(dragRow,ri); });
+      tr.addEventListener('dragend',()=>{ tr.classList.remove('dragging'); tr.draggable=false; dragRow=null; });
+      tr.addEventListener('dragstart',e=>{ dragRow=ri; tr.classList.add('dragging'); try{ e.dataTransfer.effectAllowed='move'; e.dataTransfer.setData('text/plain',String(ri)); }catch(_){} });
       t.cols.forEach((_,ci)=>{
         if(cov.has(K(ri,ci))) return;
         const inp=el('input',{class:'sheet-c',title:'Cellule '+refOf(ri,ci)+' — = pour une formule'});
@@ -1708,7 +1726,10 @@ function buildGridInto(container, t, onChange){
         if(mk){ if(mk.cs>1) td.colSpan=mk.cs; if(mk.rs>1) td.rowSpan=mk.rs; td.classList.add('merged'); }
         tr.append(td);
       });
-      tr.append(el('td',{class:'sheet-delr-cell'}, el('button',{class:'sheet-delr',title:'Supprimer la ligne',onclick:()=>{ t.rows.splice(ri,1); t.merges={}; onChange(); render(); }},'×')));
+      const grip=el('span',{class:'sheet-drag',title:'Glisser pour déplacer la ligne'},'⠿');
+      grip.addEventListener('mousedown',()=>{ tr.draggable=true; });
+      grip.addEventListener('mouseup',()=>{ tr.draggable=false; });
+      tr.append(el('td',{class:'sheet-delr-cell'}, el('div',{class:'sheet-gutter'}, grip, el('button',{class:'sheet-delr',title:'Supprimer la ligne',onclick:()=>{ t.rows.splice(ri,1); t.merges={}; onChange(); render(); }},'×'))));
       tb.append(tr);
     });
     table.append(tb); wrap.append(table);
@@ -1957,15 +1978,6 @@ function importJSON(file){
   reader.readAsText(file);
 }
 
-function backupName(manual){
-  const d=new Date(), p=n=>String(n).padStart(2,'0');
-  return `MOMOFlow_${d.getFullYear()}.${p(d.getMonth()+1)}.${p(d.getDate())}_${p(d.getHours())}.${p(d.getMinutes())}.${p(d.getSeconds())}_${manual?'manu':'auto'}.json`;
-}
-function manualBackup(){
-  const blob=new Blob([backupPayload()],{type:'application/json'});
-  const a=el('a',{href:URL.createObjectURL(blob),download:backupName(true)});
-  document.body.append(a); a.click(); a.remove(); dirty=false; toast('Sauvegarde téléchargée');
-}
 function loadBackupFile(file){
   const reader=new FileReader();
   reader.onload=()=>{
@@ -2021,10 +2033,10 @@ appMenu.addEventListener('click',e=>{
   appMenu.classList.add('hidden');
   const act=it.dataset.act;
   if(act==='new') openModal();
-  else if(act==='savenow'){ if(!FS_OK) toast('Nécessite Chrome/Edge en http(s)'); else if(!backupDir) toast('Définis d’abord le dossier de sauvegarde'); else doBackup(true); }
-  else if(act==='save') manualBackup();
+  else if(act==='save-manu') saveManu();
   else if(act==='load') $('file-import').click();
-  else if(act==='dir'){ if(FS_OK) chooseBackupDir(); else toast('Nécessite Chrome/Edge en http(s)'); }
+  else if(act==='auto-file') chooseAutoFile();
+  else if(act==='auto-delay') chooseAutoDelay();
   else if(act==='install'){ if(deferredPrompt){ deferredPrompt.prompt(); deferredPrompt.userChoice.finally(()=>{ deferredPrompt=null; showInstall(false); }); } }
 });
 document.addEventListener('click',()=>appMenu.classList.add('hidden'));
@@ -2829,9 +2841,12 @@ function setupClientAutocomplete(){
   inp.addEventListener('blur',()=>setTimeout(()=>box.classList.add('hidden'),150));
 }
 
-/* ---------- Sauvegarde locale automatique (File System Access API) ---------- */
-let backupDir=null, needReauth=false;
-const FS_OK = typeof window!=='undefined' && 'showDirectoryPicker' in window;
+/* ---------- Sauvegarde locale en fichier .MTF (File System Access API) ----------
+   Deux fichiers : un AUTO (mis à jour automatiquement, même fichier écrasé)
+   et un MANU (sauvegarde manuelle). Plus de dossier à choisir. */
+let mtfAuto=null, mtfManu=null, needReauth=false;
+const FS_OK = typeof window!=='undefined' && 'showSaveFilePicker' in window;
+let autoDelayMin = Math.max(1, parseInt(localStorage.getItem('momotion_auto_delay')||'15',10) || 15);
 
 function idbReq(mode, fn){
   return new Promise((res,rej)=>{
@@ -2848,73 +2863,81 @@ const idbGet=(k)=>idbReq('readonly',st=>st.get(k));
 function backupPayload(){
   return JSON.stringify({app:'MOMOtion Flow', version:1, exportedAt:new Date().toISOString(), affaires, tools, contacts}, null, 2);
 }
-async function dirPerm(request){
-  if(!backupDir) return false;
+const MTF_TYPES=[{description:'MOMOtion Flow (.MTF)', accept:{'application/octet-stream':['.MTF']}}];
+async function filePerm(handle, request){
+  if(!handle) return false;
   const opts={mode:'readwrite'};
-  let p=await backupDir.queryPermission(opts);
+  let p=await handle.queryPermission(opts);
   if(p==='granted') return true;
-  if(request){ p=await backupDir.requestPermission(opts); return p==='granted'; }
+  if(request){ p=await handle.requestPermission(opts); return p==='granted'; }
   return false;
 }
-async function doBackup(manual){
-  if(!backupDir){ if(manual) toast('Choisis d’abord un dossier'); return; }
-  const ok=await dirPerm(!!manual);
-  if(!ok){ needReauth=true; updateBackupUI(); if(manual) toast('Autorisation refusée'); return; }
+async function writeMTF(handle){
+  const w=await handle.createWritable();
+  await w.write(new Blob([backupPayload()],{type:'application/octet-stream'}));
+  await w.close();
+}
+async function chooseAutoFile(){
+  if(!FS_OK){ toast('Nécessite Chrome/Edge en http(s)'); return; }
+  try{
+    mtfAuto=await window.showSaveFilePicker({suggestedName:'MOMOFlow_auto.MTF', types:MTF_TYPES});
+    try{ await idbSet('mtfAuto', mtfAuto); }catch(e){}
+    needReauth=false;
+    await writeMTF(mtfAuto);
+    localStorage.setItem('momotion_auto_last', new Date().toISOString());
+    dirty=false; updateBackupUI(); toast('Fichier auto défini — mis à jour automatiquement');
+  }catch(e){ if(e&&e.name!=='AbortError') toast('Impossible de définir le fichier'); }
+}
+async function saveManu(){
+  if(!FS_OK){ toast('Nécessite Chrome/Edge en http(s)'); return; }
+  try{
+    if(!mtfManu){
+      mtfManu=await window.showSaveFilePicker({suggestedName:'MOMOFlow_manu.MTF', types:MTF_TYPES});
+      try{ await idbSet('mtfManu', mtfManu); }catch(e){}
+    }
+    if(!(await filePerm(mtfManu, true))){ toast('Autorisation refusée'); return; }
+    await writeMTF(mtfManu); dirty=false; toast('Sauvegarde manuelle enregistrée');
+  }catch(e){ if(e&&e.name!=='AbortError') toast('Échec de la sauvegarde'); }
+}
+async function autoSave(){
+  if(!mtfAuto) return;
+  if(!(await filePerm(mtfAuto, false))){ needReauth=true; updateBackupUI(); return; }
   needReauth=false;
-  try{
-    const name=backupName(manual);
-    const fh=await backupDir.getFileHandle(name,{create:true});
-    const w=await fh.createWritable(); await w.write(new Blob([backupPayload()],{type:'application/json'})); await w.close();
-    localStorage.setItem('momotion_last_backup', new Date().toISOString());
-    dirty=false; updateBackupUI(); if(manual) toast('Sauvegarde effectuée');
-    // rotation : on ne garde que les 10 fichiers les plus récents
-    try{
-      const names=[];
-      for await (const [nm] of backupDir.entries()){ if(/^MOMOFlow_.*\.json$/i.test(nm)) names.push(nm); }
-      names.sort();  // le nom contient date+heure → ordre chronologique
-      for(let i=0; i<names.length-10; i++){ try{ await backupDir.removeEntry(names[i]); }catch(e){} }
-    }catch(e){}
-  }catch(e){ if(manual) toast('Échec de la sauvegarde'); }
+  try{ await writeMTF(mtfAuto); localStorage.setItem('momotion_auto_last', new Date().toISOString()); dirty=false; updateBackupUI(); }catch(e){}
 }
-async function chooseBackupDir(){
-  try{
-    backupDir=await window.showDirectoryPicker({mode:'readwrite'});
-    try{ await idbSet('backupDir', backupDir); }catch(e){}
-    needReauth=false; updateBackupUI(); doBackup(true);
-  }catch(e){/* annulé */}
+function checkAutoBackup(){
+  if(!mtfAuto) return;
+  const last=localStorage.getItem('momotion_auto_last');
+  if(!last || (Date.now()-new Date(last).getTime())>=autoDelayMin*60000) autoSave();
 }
-async function restoreBackup(){
-  try{
-    const [fh]=await window.showOpenFilePicker({types:[{description:'Sauvegarde JSON',accept:{'application/json':['.json']}}]});
-    const data=JSON.parse(await (await fh.getFile()).text());
-    if(!(await appConfirm('Restaurer cette sauvegarde ? Les données actuelles seront remplacées.','Restaurer'))) return;
-    if(Array.isArray(data.affaires)){ affaires=data.affaires; persist(); }
-    if(data.tools){ tools=data.tools; saveTools(); }
-    if(data.contacts){ const c=data.contacts; c.clients=c.clients||[]; c.sous_traitants=c.sous_traitants||[]; c.entreprises=c.entreprises||[]; contacts=c; saveContacts(); }
-    toast('Sauvegarde restaurée'); setTimeout(()=>location.reload(),400);
-  }catch(e){/* annulé */}
-}
-function lastBackupInfo(){ return localStorage.getItem('momotion_last_backup'); }
-function checkHourlyBackup(){                 // sauvegarde auto toutes les heures dans le dossier défini
-  if(!backupDir) return;
-  const last=lastBackupInfo();
-  if(!last || (Date.now()-new Date(last).getTime())>=3600000) doBackup(false);
+function autoDelayLabel(){ return autoDelayMin>=60 ? (autoDelayMin/60)+' h' : autoDelayMin+' min'; }
+function chooseAutoDelay(){
+  const opts=[[1,'1 minute'],[5,'5 minutes'],[15,'15 minutes'],[30,'30 minutes'],[60,'1 heure']];
+  const list=el('div',{style:'display:flex;flex-direction:column;gap:6px;margin-top:12px'});
+  const bk=el('div',{class:'backdrop confirm-bk'}, el('div',{class:'confirm-box',style:'max-width:320px'},
+    el('div',{class:'confirm-msg',style:'font-weight:700'},'Délai de sauvegarde auto'), list));
+  opts.forEach(([v,label])=>{
+    list.append(el('button',{class:'btn btn-lg '+(autoDelayMin===v?'btn-save':'btn-cancel'),onclick:()=>{
+      autoDelayMin=v; localStorage.setItem('momotion_auto_delay',String(v)); bk.remove(); updateBackupUI(); toast('Délai : '+label); checkAutoBackup();
+    }}, label));
+  });
+  bk.addEventListener('click',e=>{ if(e.target===bk) bk.remove(); });
+  document.body.append(bk);
 }
 function updateBackupUI(){
-  const st=document.getElementById('bk-status'); if(!st) return;
-  st.innerHTML='';
-  if(!backupDir){ st.textContent='Aucun dossier défini.'; return; }
-  const last=lastBackupInfo();
-  const lastTxt = last ? new Date(last).toLocaleString('fr-FR',{dateStyle:'short',timeStyle:'short'}) : 'jamais';
-  st.innerHTML = `Dossier : <b>${escapeHtml(backupDir.name||'sélectionné')}</b><br>Dernière sauvegarde : <b>${lastTxt}</b>`
-    + (needReauth ? `<br><span class="bk-reauth">⚠ Ré-autorisation requise — clique « Sauvegarder maintenant ».</span>` : '');
+  const fl=document.getElementById('auto-file-label');
+  if(fl) fl.textContent = mtfAuto ? 'Fichier auto : '+(needReauth?'⚠ réautoriser':(mtfAuto.name||'défini')) : 'Fichier de sauvegarde auto (.MTF)';
+  const dl=document.getElementById('auto-delay-label');
+  if(dl) dl.textContent = 'Délai auto : '+autoDelayLabel();
 }
 function initBackup(){
   (async()=>{
-    try{ const h=await idbGet('backupDir'); if(h) backupDir=h; }catch(e){}
-    checkHourlyBackup();
+    try{ const a=await idbGet('mtfAuto'); if(a) mtfAuto=a; }catch(e){}
+    try{ const m=await idbGet('mtfManu'); if(m) mtfManu=m; }catch(e){}
+    updateBackupUI();
+    checkAutoBackup();
   })();
-  setInterval(checkHourlyBackup, 60000);   // vérifie chaque minute, sauvegarde si ≥ 1 h
+  setInterval(checkAutoBackup, 60000);   // vérifie chaque minute, écrit si le délai est écoulé
   window.addEventListener('beforeunload', e=>{
     if(dirty){ e.preventDefault(); e.returnValue=''; }
   });
